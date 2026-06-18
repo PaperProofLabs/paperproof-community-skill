@@ -7,6 +7,8 @@ description: Operate the PaperProof protocol for AI agents and developer assista
 
 Use this skill as a protocol client guide, not as a website automation guide. Prefer `@paperproof/sdk-ts`, Sui clients, Walrus clients, and indexer APIs. Use the website only for human preview links or when the user explicitly requests browser interaction.
 
+The skill is suitable for general PaperProof users, developers, operators, researchers, and AI agents. It should work for third-party PaperProof applications as well as PaperProof Labs official applications.
+
 ## First Decision
 
 Classify the user request before acting:
@@ -17,6 +19,15 @@ Classify the user request before acting:
 - **Verify**: check chain bindings, canonical events, Walrus content, hashes, deployment IDs, or provenance.
 - **Prepare**: choose an artifact type, draft metadata, build a publication checklist, or package files.
 - **Operate official registries**: native prompts, Agent Memory registry, governance-controlled availability, or official content publishing.
+
+If the request is broad, ask one short clarifying question only when the missing choice blocks safe action. Otherwise choose conservative defaults and continue.
+
+## When Not To Use This Skill
+
+- The user only wants general Sui or Walrus help with no PaperProof artifact, registry, or verification context.
+- The user asks for website styling, marketing copy, or frontend layout unrelated to protocol operations.
+- The user asks for private-key extraction, seed phrase handling, or custodial wallet management.
+- The user asks to bypass wallet review, governance authority, registry permissions, CORS, or chain validation.
 
 ## Non-Negotiable Rules
 
@@ -38,6 +49,7 @@ Classify the user request before acting:
 - Read `references/official-registries.md` for native prompts, Agent Memory registry, governance control, and official content.
 - Read `references/error-handbook.md` when diagnosing failed transactions, relayers, Walrus reads, or Move aborts.
 - Read `references/sdk-reference.md` when writing code with the TypeScript SDK.
+- Read `references/agent-task-patterns.md` when turning natural-language user requests into concrete PaperProof actions.
 
 ## Default Execution Pattern
 
@@ -67,6 +79,15 @@ const paperproof = createPaperProofSDK({ network: 'mainnet' });
 
 Use `MAINNET_DEPLOYMENT` unless the user explicitly provides an upgraded deployment manifest.
 
+## SDK Fallbacks
+
+If `@paperproof/sdk-ts` is unavailable:
+
+1. Install it in a temporary Node project when the environment allows package installation.
+2. If installation is blocked, use direct Sui object reads, Move call targets, Walrus APIs, and the deployment constants in `references/protocol-map.md`.
+3. If writes cannot be prepared safely, stop at a publication checklist or unsigned transaction plan.
+4. Never simulate a website click path as a substitute for missing protocol capability unless the user explicitly asks for website operation.
+
 ## Output Style
 
 For user-facing task results, include:
@@ -75,4 +96,3 @@ For user-facing task results, include:
 - **Protocol IDs**: artifact code, series ID, version ID, blob ID/object ID, and transaction digest when available.
 - **Confidence**: verified, partially verified, unavailable, or failed.
 - **Next action**: only when the user must sign, top up funds, upload a file, renew a blob, or choose metadata.
-

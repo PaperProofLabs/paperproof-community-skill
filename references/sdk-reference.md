@@ -6,6 +6,8 @@ Install:
 npm install @paperproof/sdk-ts@0.2.6 @mysten/sui@^2.16.0
 ```
 
+Use `0.2.6` as the known-compatible baseline captured by this skill. If a newer SDK is installed, inspect its release notes or exported `MAINNET_DEPLOYMENT` before writing to mainnet.
+
 Initialize:
 
 ```ts
@@ -121,3 +123,14 @@ const content = await readAndVerifyWalrusContent(walrusClient, reference);
 
 At startup or before important writes, use deployment verification and update checks. If a manifest says packages changed, create an override with `createDeployment(MAINNET_DEPLOYMENT, override)` instead of scattering IDs in application code.
 
+## If the SDK Is Missing
+
+When a runtime cannot install the SDK, continue with read-only planning when possible:
+
+- use deployment constants from `protocol-map.md`;
+- read Sui objects directly by ID;
+- query package-scoped PaperProof events;
+- read Walrus blobs by version header references;
+- prepare metadata JSON and an unsigned transaction plan.
+
+For mainnet writes, prefer pausing at a clear handoff rather than reconstructing complex transaction builders from memory.

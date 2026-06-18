@@ -1,0 +1,76 @@
+# Agent Task Patterns
+
+Use this reference to translate natural-language requests into PaperProof protocol tasks. Prefer concrete next actions over long protocol explanations.
+
+## Common User Requests
+
+| User says | Interpret as | First action |
+|---|---|---|
+| "Publish this paper" | New `preprint` or `technicalReport` | Ask whether it is research/preprint or formal report |
+| "Put this file on PaperProof" | New artifact, often `genericFile` | Inspect file type and ask for title/license if missing |
+| "Update this artifact" | Add version | Resolve series ID/artifact code and confirm ownership |
+| "Can I publish with this wallet?" | Wallet readiness check | Query SUI and WAL/storage capability |
+| "Is this artifact real?" | Verification | Resolve series/version, check package IDs and events |
+| "Why does the body not load?" | Content/Walrus diagnosis | Read version header and test Walrus blob availability |
+| "Make this AI-usable" | Prepare metadata/package | Choose artifact type and draft machine-readable metadata |
+| "Publish an official prompt" | Native prompt registry workflow | Confirm operator authority and route ID |
+| "Create memory for this agent" | Memory registry workflow | Confirm app ID, owner, provider, and one-active-entry policy |
+
+## Intent Checklist
+
+Before writing code or building a transaction, identify:
+
+- target network;
+- user role: ordinary publisher, app developer, official operator, governance participant, or auditor;
+- task mode: publish, add version, query, verify, package, or administer registry;
+- object identifier: artifact code, series ID, version ID, wallet address, route ID, or provider entry;
+- content source: local file, URL, generated text, zip package, PDF, JSON, or existing Walrus blob;
+- whether comments should be open, locked, or archived;
+- whether the task is read-only or requires wallet signing.
+
+## Conservative Defaults
+
+- Use `mainnet` when the user talks about live PaperProof artifacts and does not name a test network.
+- Use `genericFile` for arbitrary files and protocol packages when no specific artifact type fits.
+- Use Markdown package zip for blog-like content that may later gain images.
+- Keep comments open for forum topics and ask before locking user-published artifacts.
+- Lock comments for official docs, prompts, and configuration artifacts unless told otherwise.
+- Prefer latest-version policy for ordinary native prompt updates; use pinned versions only for controlled rollout.
+
+## User-Facing Explanations
+
+Explain PaperProof in operational terms:
+
+- A series is the stable identity.
+- A version is a specific content record.
+- Walrus stores bytes.
+- Sui stores identity, metadata, references, governance, and verification bindings.
+- Comments and likes are protocol objects bound to the series.
+
+Avoid forcing users to learn every object before acting. Ask for the smallest missing input needed to proceed.
+
+## Write Confirmation Template
+
+Before mainnet writes, say:
+
+```text
+This will write to Sui mainnet and/or Walrus. The content reference, metadata, and transaction record will be public and persistent. I will prepare the transaction, and your wallet must review and sign it.
+```
+
+Then list the artifact type, title, file hash, target series if any, comments policy, and estimated assets needed.
+
+## Result Summary Template
+
+After a successful operation, return:
+
+```text
+Published/updated: <title>
+Artifact type: <type>
+Artifact code: <code>
+Series ID: <id>
+Version ID: <id>
+Walrus blob: <blob id>
+Transaction: <digest>
+Verification: <verified/partially verified/not checked>
+```
+

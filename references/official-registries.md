@@ -1,6 +1,6 @@
 # Official Registries
 
-Official registries are protocol-level bindings managed through PaperProof authority or governance-like controls. Do not treat them as ordinary user content.
+Official registries are protocol-level bindings managed through application authority, PaperProof authority, or governance-like controls. Do not treat them as ordinary user content. For third-party applications, replace PaperProof Labs official app IDs and routes with the application's own IDs.
 
 ## Native Prompts
 
@@ -10,9 +10,9 @@ PaperProof native prompts are PaperProof artifacts, normally `genericFile` packa
 application/vnd.paperproof.prompt+json
 ```
 
-The prompt registry maps an app route to a prompt artifact series. Use `useLatest: true` for default rolling updates or a pinned version ID for controlled rollout.
+The prompt registry maps an application route or capability name to a prompt artifact series. Use `useLatest: true` for default rolling updates or a pinned version ID for controlled rollout.
 
-Current official app prompt manifest includes routes such as:
+The PaperProof Labs official app prompt manifest includes routes such as:
 
 - `copilot/global`
 - `copilot/memory`
@@ -44,13 +44,13 @@ Current official app prompt manifest includes routes such as:
 4. Set latest or pinned policy.
 5. Verify the app can resolve the prompt series and download the package.
 
-Only authorized operators should write official prompt registry entries.
+Only authorized operators should write prompt registry entries for an app they control. Ordinary users may publish prompt artifacts, but they should not be represented as official registry bindings unless the relevant authority registers them.
 
 ## Agent Memory Registry
 
 The memory registry is a governed discovery and availability layer. It does not store private memory bodies. Private memory lives in the memory provider, currently MemWal-oriented integrations.
 
-Official PaperProof Copilot defaults:
+PaperProof Labs official Copilot defaults:
 
 - `appId`: `paperproof-app`
 - `namespaceRoot`: `paperproof/copilot`
@@ -65,7 +65,7 @@ A usable official memory should satisfy:
 
 - entry belongs to the configured MemoryRegistry;
 - owner wallet matches the user;
-- `appId` matches the official app or requested app;
+- `appId` matches the official app or the third-party app requested by the user;
 - provider policy is available;
 - entry is available;
 - owner has not disabled it;
@@ -82,7 +82,7 @@ A usable official memory should satisfy:
 
 ## Governance Relationship
 
-Native prompt and memory registry control is intentionally lighter than full proposal execution. The registry checks authority/governance-bound permissions for official writes and availability controls. Do not assume every registry update requires a public vote.
+Native prompt and memory registry control is intentionally lighter than full proposal execution. The registry checks authority/governance-bound permissions for official writes and availability controls. Do not assume every registry update requires a public vote, and do not assume every application uses PaperProof Labs authority.
 
 Use governance checks for:
 
@@ -101,4 +101,3 @@ Official Docs, Blog, and Forum content may be PaperProof's first users of its ow
 - Forum starter topics are `blogPost` artifacts with open comments.
 
 When publishing official content, add stable metadata that lets the app resolve the intended page without relying on website state alone.
-
