@@ -1,0 +1,4 @@
+display_name: PaperProof Protocol
+short_description: Publish, query, and verify PaperProof artifacts through the protocol.
+default_prompt: Use PaperProof Protocol to help me publish, update, query, or verify PaperProof artifacts on Sui and Walrus.
+
