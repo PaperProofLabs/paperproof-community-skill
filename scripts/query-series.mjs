@@ -1,5 +1,8 @@
 #!/usr/bin/env node
 
+// Copyright (c) 2026 PaperProof Labs
+// SPDX-License-Identifier: Apache-2.0
+
 import { fail, parseArgs, printJson, requireArg } from './lib/cli.mjs';
 
 async function loadSdk() {
@@ -25,4 +28,3 @@ async function main() {
 }
 
 main().catch(fail);
-

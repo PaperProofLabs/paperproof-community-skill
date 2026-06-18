@@ -1,5 +1,8 @@
 #!/usr/bin/env node
 
+// Copyright (c) 2026 PaperProof Labs
+// SPDX-License-Identifier: Apache-2.0
+
 import { createHash } from 'node:crypto';
 import { statSync, createReadStream } from 'node:fs';
 import { basename } from 'node:path';
@@ -28,4 +31,3 @@ stream.on('end', () => {
   };
   console.log(JSON.stringify(result, null, 2));
 });
-

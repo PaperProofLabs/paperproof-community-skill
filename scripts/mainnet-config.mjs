@@ -1,5 +1,8 @@
 #!/usr/bin/env node
 
+// Copyright (c) 2026 PaperProof Labs
+// SPDX-License-Identifier: Apache-2.0
+
 const config = {
   name: 'paperproof-mainnet-2026-05-13',
   network: 'mainnet',
@@ -32,4 +35,3 @@ const config = {
 };
 
 console.log(JSON.stringify(config, null, 2));
-

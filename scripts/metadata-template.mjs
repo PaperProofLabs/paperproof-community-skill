@@ -1,5 +1,8 @@
 #!/usr/bin/env node
 
+// Copyright (c) 2026 PaperProof Labs
+// SPDX-License-Identifier: Apache-2.0
+
 const type = (process.argv[2] ?? '').trim();
 
 const templates = {
@@ -96,4 +99,3 @@ if (!templates[type]) {
 }
 
 console.log(JSON.stringify(templates[type], null, 2));
-

@@ -1,3 +1,6 @@
+// Copyright (c) 2026 PaperProof Labs
+// SPDX-License-Identifier: Apache-2.0
+
 export function parseArgs(argv = process.argv.slice(2)) {
   const args = { _: [] };
   for (const item of argv) {
