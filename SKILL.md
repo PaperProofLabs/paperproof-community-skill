@@ -7,7 +7,7 @@ description: Operate the PaperProof protocol for AI agents and developer assista
 
 Use this skill as a protocol client guide, not as a website automation guide. Prefer `@paperproof/sdk-ts`, Sui clients, Walrus clients, and indexer APIs. The skill must remain useful if every PaperProof website or UI disappears. Use websites only for optional human preview links or when the user explicitly requests browser interaction.
 
-The skill is suitable for general PaperProof users, developers, operators, researchers, and AI agents. It should work for third-party PaperProof applications as well as PaperProof Labs official applications.
+The skill is suitable for community PaperProof users, developers, operators, researchers, and AI agents. Keep it useful for third-party PaperProof applications and user-owned artifacts; avoid project-private mappings, unpublished operational assumptions, or PaperProof Labs internal-only shortcuts unless the user explicitly provides that context.
 
 ## First Decision
 
@@ -101,8 +101,9 @@ The `scripts/` folder contains protocol-oriented helpers. They do not require th
 - `read-object.mjs`: read a Sui object by ID with content and owner fields.
 - `query-series.mjs`: use the SDK to read a PaperProof series, current version, comments tree, and likes book.
 - `query-events.mjs`: query PaperProof events using SDK query providers.
+- `add-version-from-local-file.mjs`: dry-run or execute a controlled add-version flow for a local PDF/file. Dry-run is read-only; `--run` requires an explicit local signer env and uploads to Walrus.
 
-If a helper needs dependencies, run `npm install` in the skill directory. Helpers that write to chain are intentionally not included as automatic signers; use SDK transaction builders and the user's explicit wallet/signer.
+If a helper needs dependencies, run `npm install` in the skill directory. Helpers that write to chain must use the user's explicit wallet/signer. Do not ask community users to reveal secrets; for local signer helpers, the user must already control their own signer environment.
 
 ## Output Style
 

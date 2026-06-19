@@ -23,6 +23,7 @@ Use this reference to translate natural-language requests into PaperProof protoc
 - Metadata draft: run `node scripts/metadata-template.mjs <artifactType>`.
 - Publish readiness: run `node scripts/plan-publish.mjs --type=<artifactType> --input=<metadata.json>`.
 - Add-version readiness: add `--series=<seriesId>` to `plan-publish.mjs`.
+- Local-file add version dry-run: run `node scripts/add-version-from-local-file.mjs --type=<preprint|technicalReport> --series=<seriesId> --file=<path>` first without `--run`.
 - Object inspection: run `node scripts/read-object.mjs --id=<objectId>`.
 - Series inspection: run `node scripts/query-series.mjs --series=<seriesId>`.
 - Event lookup: run `node scripts/query-events.mjs --module=publishing --event=ArtifactPublishedEvent` or pass `--moveEventType=<type>`.
@@ -50,6 +51,23 @@ uploads:
 For dataset packages, keep chain metadata sparse. Put source notes, schemas,
 field descriptions, and file manifests inside the zip package rather than in
 `seriesMetadata` or `versionMetadata`.
+
+## Mainnet Add-Version Pattern
+
+Use this order when replacing the latest content of an existing series:
+
+1. Resolve the target series from the user's artifact code, series ID, wallet
+   history, or indexer search, then run `query-series.mjs`.
+2. Confirm artifact type, owner, current version ID, and current content hash.
+3. Hash the local replacement file and stop if the hash already equals current.
+4. Reuse current typed metadata unless the user explicitly requested metadata
+   changes; put provenance in short `versionMetadata` entries.
+5. Dry-run `add-version-from-local-file.mjs` without signer material, or build
+   the SDK transaction locally without Walrus upload.
+6. Tell the user before writing to Walrus or Sui mainnet.
+7. Upload to Walrus, build the typed add-version transaction, execute with the
+   explicit signer or wallet, and extract `extractAddVersionResult`.
+8. Query the series again and verify `currentVersionId` and content hash.
 
 ## Intent Checklist
 

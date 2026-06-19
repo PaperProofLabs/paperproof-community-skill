@@ -6,6 +6,7 @@
   "description": "Codex skill resources and protocol helper scripts for PaperProof.",
   "scripts": {
     "check:wallet": "node scripts/check-wallet.mjs",
+    "add:version:file": "node scripts/add-version-from-local-file.mjs",
     "config": "node scripts/mainnet-config.mjs",
     "digest": "node scripts/file-digest.mjs",
     "metadata": "node scripts/metadata-template.mjs",
@@ -16,7 +17,7 @@
   },
   "dependencies": {
     "@mysten/sui": "^2.16.0",
+    "@mysten/walrus": "^1.1.7",
     "@paperproof/sdk-ts": "0.2.6"
   }
 }
-
