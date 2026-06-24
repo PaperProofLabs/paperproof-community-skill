@@ -67,7 +67,7 @@ If the request is broad, ask one short clarifying question only when the missing
 Use the published TypeScript SDK when possible:
 
 ```bash
-npm install @paperproof/sdk-ts@0.2.6 @mysten/sui@^2.16.0
+npm install @paperproof/sdk-ts@0.2.7 @mysten/sui@^2.16.0
 ```
 
 Initialize with:

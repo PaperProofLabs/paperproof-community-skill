@@ -13,6 +13,7 @@ Publishing does not require any PaperProof website. Use the website only after p
 5. **Check wallet readiness**: address, SUI gas, WAL/storage path, and selected signer.
 6. **Hash content** with SHA-256 or SDK helper. Keep the exact bytes stable after hashing.
 7. **Upload to Walrus** only after local metadata validation passes, then record `walrusBlobId` and `walrusBlobObjectId`.
+   Use a 10-epoch storage baseline unless the user explicitly asks for a different Walrus retention period.
 8. **Build PaperProof transaction** using `@paperproof/sdk-ts` transaction builders.
 9. **Ask wallet to sign and execute**. Do not bypass wallet review.
 10. **Extract canonical result** with SDK result helpers.
@@ -39,6 +40,7 @@ reject.
 3. Prepare new bytes and metadata.
 4. Validate the add-version metadata locally before any upload.
 5. Upload the new bytes to Walrus.
+   Use a 10-epoch storage baseline unless the user explicitly asks for a different Walrus retention period.
 6. Build the typed add-version transaction: `addBlogPostVersion`, `addTechnicalReportVersion`, `addDatasetVersion`, `addSoftwareReleaseVersion`, `addGenericFileVersion`, or the preprint version flow.
 7. Execute and verify that the series current version now points to the new version.
 8. Report both old and new version IDs when available.
@@ -84,7 +86,7 @@ construction. Keep these constraints in mind before uploading content to Walrus:
 For datasets, prefer putting `README.md`, `schema.json`, and `sources.json` in
 the zip package, while keeping chain metadata to high-value identifiers such as
 dataset version, record count, coverage years, package hash, SDK version, and
-Walrus epoch count.
+Walrus epoch count. The current official baseline is 10 epochs.
 
 ## Result Checklist
 

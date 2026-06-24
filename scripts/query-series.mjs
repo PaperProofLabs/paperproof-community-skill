@@ -9,7 +9,7 @@ async function loadSdk() {
   try {
     return await import('@paperproof/sdk-ts');
   } catch (error) {
-    throw new Error(`Cannot load @paperproof/sdk-ts. Install with: npm install @paperproof/sdk-ts@0.2.6 @mysten/sui. ${error instanceof Error ? error.message : String(error)}`);
+    throw new Error(`Cannot load @paperproof/sdk-ts. Install with: npm install @paperproof/sdk-ts@0.2.7 @mysten/sui. ${error instanceof Error ? error.message : String(error)}`);
   }
 }
 

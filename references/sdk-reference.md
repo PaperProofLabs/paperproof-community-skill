@@ -3,10 +3,10 @@
 Install:
 
 ```bash
-npm install @paperproof/sdk-ts@0.2.6 @mysten/sui@^2.16.0
+npm install @paperproof/sdk-ts@0.2.7 @mysten/sui@^2.16.0
 ```
 
-Use `0.2.6` as the known-compatible baseline captured by this skill. If a newer SDK is installed, inspect its release notes or exported `MAINNET_DEPLOYMENT` before writing to mainnet.
+Use `0.2.7` as the known-compatible baseline captured by this skill. If a newer SDK is installed, inspect its release notes or exported `MAINNET_DEPLOYMENT` before writing to mainnet.
 
 Initialize:
 

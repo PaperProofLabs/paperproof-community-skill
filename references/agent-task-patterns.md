@@ -23,7 +23,7 @@ Use this reference to translate natural-language requests into PaperProof protoc
 - Metadata draft: run `node scripts/metadata-template.mjs <artifactType>`.
 - Publish readiness: run `node scripts/plan-publish.mjs --type=<artifactType> --input=<metadata.json>`.
 - Add-version readiness: add `--series=<seriesId>` to `plan-publish.mjs`.
-- Local-file add version dry-run: run `node scripts/add-version-from-local-file.mjs --type=<preprint|technicalReport> --series=<seriesId> --file=<path>` first without `--run`.
+- Local-file add version dry-run: run `node scripts/add-version-from-local-file.mjs --type=<preprint|technicalReport|genericFile> --series=<seriesId> --file=<path>` first without `--run`.
 - Object inspection: run `node scripts/read-object.mjs --id=<objectId>`.
 - Series inspection: run `node scripts/query-series.mjs --series=<seriesId>`.
 - Event lookup: run `node scripts/query-events.mjs --module=publishing --event=ArtifactPublishedEvent` or pass `--moveEventType=<type>`.

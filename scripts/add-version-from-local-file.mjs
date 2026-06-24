@@ -8,6 +8,7 @@ import fs from 'node:fs/promises';
 import { spawn } from 'node:child_process';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { setTimeout as delay } from 'node:timers/promises';
 
 import { decodeSuiPrivateKey } from '@mysten/sui/cryptography';
 import { Ed25519Keypair } from '@mysten/sui/keypairs/ed25519';
@@ -39,6 +40,7 @@ Add a new version to an existing PaperProof series from a local file.
 Usage:
   node scripts/add-version-from-local-file.mjs --type=preprint --series=<seriesId> --file=<path>
   node scripts/add-version-from-local-file.mjs --run --type=technicalReport --series=<seriesId> --file=<path> --signer-env=<env> --account=4
+  node scripts/add-version-from-local-file.mjs --run --type=genericFile --series=<seriesId> --file=<path> --signer-env=<env> --account=4
 
 Default mode is a dry run. --run writes the file to Walrus and submits a Sui
 mainnet add-version transaction with the explicitly configured signer.
@@ -61,6 +63,21 @@ function parseArgs(argv = process.argv.slice(2)) {
 
 function assert(condition, message) {
   if (!condition) throw new Error(message);
+}
+
+async function waitForLatestVersion(sdk, seriesId, expectedVersionId, expectedContentHash, attempts = 6, delayMs = 2000) {
+  let last = null;
+  for (let index = 0; index < attempts; index += 1) {
+    last = await sdk.query.getSeriesDetails(seriesId);
+    if (last.series.currentVersionId === expectedVersionId && last.currentVersion.contentHash === expectedContentHash) {
+      return last;
+    }
+    if (index < attempts - 1) await delay(delayMs);
+  }
+  throw new Error(
+    `Latest version did not advance to the added version after ${attempts} checks. `
+    + `Observed currentVersionId=${last?.series?.currentVersionId ?? 'unknown'}, expected=${expectedVersionId}.`,
+  );
 }
 
 function normalizeAddress(value) {
@@ -207,6 +224,23 @@ function technicalReportInput(args, content, upload, currentVersion) {
   };
 }
 
+function genericFileInput(args, content, upload, currentVersion) {
+  const raw = currentVersion.rawFields ?? {};
+  return {
+    seriesId: args.series,
+    title: args.title ?? raw.title,
+    description: args.description ?? raw.description,
+    filename: args.filename ?? content.filename,
+    fileSize: content.fileSize,
+    license: args.license ?? raw.license,
+    contentHash: content.contentHash,
+    walrusBlobId: upload.blobId,
+    walrusBlobObjectId: upload.blobObjectId,
+    contentType: content.contentType,
+    versionMetadata: commonVersionMetadata(args, content, currentVersion),
+  };
+}
+
 function toSdkResponse(execution) {
   return {
     events: (execution.events ?? []).map((event) => ({
@@ -226,10 +260,10 @@ async function main() {
     return;
   }
   const type = args.type;
-  assert(type === 'preprint' || type === 'technicalReport', 'Supported --type values for this helper: preprint, technicalReport.');
+  assert(type === 'preprint' || type === 'technicalReport' || type === 'genericFile', 'Supported --type values for this helper: preprint, technicalReport, genericFile.');
   assert(args.series, 'Missing --series=<seriesId>.');
   assert(args.file, 'Missing --file=<path>.');
-  const contentType = args['content-type'] ?? 'application/pdf';
+  const contentType = args['content-type'] ?? (type === 'genericFile' ? 'application/octet-stream' : 'application/pdf');
   const account = args.run ? await loadAccount(args) : null;
   const deployment = createDeployment(MAINNET_DEPLOYMENT);
   const sdk = createPaperProofSDK({ network: 'mainnet', transport: 'grpc', queryTransport: 'none' });
@@ -244,7 +278,11 @@ async function main() {
     }),
   );
   const view = await sdk.query.getSeriesDetails(args.series);
-  const expectedType = type === 'preprint' ? ARTIFACT_TYPES.preprint : ARTIFACT_TYPES.technicalReport;
+  const expectedType = type === 'preprint'
+    ? ARTIFACT_TYPES.preprint
+    : type === 'technicalReport'
+      ? ARTIFACT_TYPES.technicalReport
+      : ARTIFACT_TYPES.genericFile;
   assert(view.series.artifactType === expectedType, `Series artifact type ${view.series.artifactType} does not match ${type}.`);
   if (account) assert(view.series.owner.toLowerCase() === account.address.toLowerCase(), `Series owner ${view.series.owner} does not match signer ${account.address}.`);
   const content = await readContent(args.file, contentType);
@@ -282,8 +320,14 @@ async function main() {
   const txb = new PaperProofTxBuilder(deployment);
   const input = type === 'preprint'
     ? preprintInput(args, content, upload, view.currentVersion)
-    : technicalReportInput(args, content, upload, view.currentVersion);
-  const tx = type === 'preprint' ? txb.addPreprintVersion(input) : txb.addTechnicalReportVersion(input);
+    : type === 'technicalReport'
+      ? technicalReportInput(args, content, upload, view.currentVersion)
+      : genericFileInput(args, content, upload, view.currentVersion);
+  const tx = type === 'preprint'
+    ? txb.addPreprintVersion(input)
+    : type === 'technicalReport'
+      ? txb.addTechnicalReportVersion(input)
+      : txb.addGenericFileVersion(input);
   if (account) tx.setSenderIfNotSet(account.address);
   const execution = args.run
     ? await robustExecuteTransaction(sui, account.signer, tx, `add ${type} version`)
@@ -292,9 +336,7 @@ async function main() {
     ? extractAddVersionResult(toSdkResponse(execution), deployment)
     : { seriesId: args.series, versionId: ZERO, artifactType: expectedType, version: BigInt(Number(view.series.currentVersion) + 1) };
   if (args.run) {
-    const refreshed = await sdk.query.getSeriesDetails(args.series);
-    assert(refreshed.series.currentVersionId === added.versionId, 'Latest version did not advance to the added version.');
-    assert(refreshed.currentVersion.contentHash === content.contentHash, 'Latest version hash does not match local file hash.');
+    await waitForLatestVersion(sdk, args.series, added.versionId, content.contentHash);
   }
   const report = {
     ok: true,
