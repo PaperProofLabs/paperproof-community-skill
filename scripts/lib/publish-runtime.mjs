@@ -93,10 +93,10 @@ export function classifyOperatorError(error, context = {}) {
     transport,
   };
 
-  if (textHas(text, 'missing private_key', 'missing address', 'signer mismatch', 'no usable signer accounts', 'could not find indexed signer account')) {
+  if (textHas(text, 'missing private_key', 'missing address', 'signer mismatch', 'no usable signer accounts', 'could not find indexed signer account', 'sui cli keystore', 'sui cli client config not found', 'active sui cli address', 'cli alias not found')) {
     result.category = 'signer';
     result.code = 'SIGNER_CONFIG_INVALID';
-    result.summary = 'Signer environment could not be resolved.';
+    result.summary = 'Signer source could not be resolved from env or Sui CLI keystore.';
     return result;
   }
 

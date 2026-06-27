@@ -27,6 +27,7 @@ If the request is broad, ask one short clarifying question only when the missing
 - Prefer `jsonrpc` for reads and readiness checks unless the user explicitly asks for gRPC.
 - Treat `fallback` as the default query mode when a confirmation read may need a second path.
 - Keep this skill reusable for third-party apps, notebooks, and agents; do not assume official server paths or browser sessions.
+- For local signed flows, prefer user-controlled signer sources in this order: browser wallet, local Sui CLI keystore, then explicit env-managed signer material.
 
 ## When Not To Use This Skill
 
@@ -118,6 +119,20 @@ The `scripts/` folder contains protocol-oriented helpers. They do not require th
 - `extend-walrus-retention.mjs`: inspect current Walrus retention windows for selected artifacts and optionally batch-extend them to a target epoch window.
 
 If a helper needs dependencies, run `npm install` in the skill directory. Helpers that write to chain must use the user's explicit wallet/signer. Do not ask community users to reveal secrets; for local signer helpers, the user must already control their own signer environment. Prefer unsigned or dry-run modes until the user has chosen a signer path.
+
+Current local signer modes:
+
+- `--signer-mode=single-env`: `ADDRESS` + `PRIVATE_KEY`
+- `--signer-mode=indexed-env`: `ADDR_1..N` + `PRIVATE_KEY_1..N`
+- `--signer-mode=cli-keystore`: the local Sui CLI keystore, using `active_address` by default
+- `--signer-mode=auto`: try `single-env`, then `indexed-env`, then `cli-keystore`
+
+Useful signer selection flags:
+
+- `--signer-env=<path>`
+- `--cli-config-dir=<path>`
+- `--cli-address=<0x...>`
+- `--cli-alias=<name>`
 
 ## Retention Workflow
 

@@ -62,6 +62,9 @@ Signer modes:
   --signer-mode=auto         auto-detect single-env first, then indexed-env
   --signer-mode=single-env   use ADDRESS / PRIVATE_KEY (or custom --address-var / --private-key-var)
   --signer-mode=indexed-env  use ADDR_1 / PRIVATE_KEY_1 ... ADDR_16 / PRIVATE_KEY_16
+  --signer-mode=cli-keystore use the local Sui CLI keystore and active address
+  --cli-address=<0x...>      pick one CLI keystore address explicitly
+  --cli-alias=<name>         pick one CLI alias explicitly
 `.trim();
 }
 

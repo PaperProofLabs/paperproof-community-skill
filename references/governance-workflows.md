@@ -24,6 +24,7 @@ They should not try to manage outcomes, keep proposals open intentionally, auto-
 ## Proposal Flow
 
 1. Resolve the signer environment.
+   Community helpers may resolve it from either a user-controlled env file or the local Sui CLI keystore.
 2. Read governance config.
 3. Check:
    - proposal creation is not paused;
@@ -50,6 +51,7 @@ Dry-run/preflight:
 
 ```powershell
 node .\scripts\create-signal-proposal.mjs --preflight --title="..." --description="..." --stake-pprf=10000000 --signer-env=.\signer.env --account=1
+node .\scripts\create-signal-proposal.mjs --preflight --title="..." --description="..." --stake-pprf=10000000 --signer-mode=cli-keystore --cli-alias=my-mainnet
 ```
 
 Real write:
@@ -61,6 +63,7 @@ node .\scripts\create-signal-proposal.mjs --run --title="..." --description="...
 ## Vote Flow
 
 1. Resolve the signer environment.
+   Prefer an explicit alias or address when the local CLI keystore contains multiple accounts.
 2. Resolve the proposal by numeric id or proposal object id.
 3. Read governance config and proposal state.
 4. Check:
@@ -92,6 +95,7 @@ Dry-run/preflight:
 
 ```powershell
 node .\scripts\vote-proposal.mjs --preflight --proposal=22 --side=yes --stake-pprf=101 --signer-env=.\signer.env --account=2
+node .\scripts\vote-proposal.mjs --preflight --proposal=22 --side=yes --stake-pprf=101 --signer-mode=cli-keystore --cli-address=0x...
 ```
 
 Real write:

@@ -49,7 +49,9 @@ Options:
   --source-hash=<text>              defaults to git:<shortsha>[+dirty]
   --report-dir=<dir>                defaults to ./artifacts
   --output-zip=<path>               defaults to ./artifacts/<project>-<timestamp>.zip
-  --signer-mode=auto|single-env|indexed-env
+  --signer-mode=auto|single-env|indexed-env|cli-keystore
+  --cli-address=<0x...>
+  --cli-alias=<name>
   --rpc=<url>
   --transport=grpc|jsonrpc
   --query-transport=none|jsonrpc|graphql|fallback

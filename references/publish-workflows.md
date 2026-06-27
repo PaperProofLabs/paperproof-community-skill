@@ -38,6 +38,7 @@ For signer selection, keep community workflows generic:
 - use unsigned/dry-run flows first;
 - prefer browser wallet or local CLI signing for third-party users;
 - use environment-managed signer material only when the user already controls that runtime.
+- when Node helpers run locally, support either env-managed signer files or the user's Sui CLI keystore instead of assuming one fixed path.
 
 ## Add-Version Flow
 
@@ -61,6 +62,11 @@ For signer selection, keep community workflows generic:
 `add-version-from-local-file.mjs` supports transport and readiness controls so community users can adapt to endpoint instability without changing protocol flow:
 
 - `--preflight`
+- `--signer-mode=auto|single-env|indexed-env|cli-keystore`
+- `--signer-env=<path>`
+- `--cli-config-dir=<path>`
+- `--cli-address=<0x...>`
+- `--cli-alias=<name>`
 - `--rpc=<url>`
 - `--transport=grpc|jsonrpc`
 - `--query-transport=none|jsonrpc|graphql|fallback`

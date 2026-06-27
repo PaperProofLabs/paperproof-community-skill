@@ -35,6 +35,18 @@ If exact fee estimation is unavailable, report that the check is approximate and
 - AI agents should prepare transactions and explain them before execution.
 - For mainnet writes, give the user the action label and the IDs that will be touched.
 
+Supported local signer patterns in the current community helpers:
+
+- `single-env`: `ADDRESS` + `PRIVATE_KEY`
+- `indexed-env`: `ADDR_1`, `PRIVATE_KEY_1`, `ADDR_2`, `PRIVATE_KEY_2`, ...
+- `cli-keystore`: `~/.sui/sui_config/client.yaml` + `sui.keystore`, optionally narrowed by `--cli-address` or `--cli-alias`
+
+Operator guidance:
+
+- Do not ask the user to paste a private key into chat.
+- If signer discovery fails, ask only for a signer file path, CLI config directory, target public address, or target alias.
+- If the CLI keystore contains multiple addresses and no active address, require `--cli-address` or `--cli-alias` instead of guessing.
+
 ## WAL and Walrus
 
 Walrus operations may involve reserving storage, writing blobs, certifying availability, extending epochs, or transferring blob objects. These steps are not always atomic with PaperProof chain registration.
