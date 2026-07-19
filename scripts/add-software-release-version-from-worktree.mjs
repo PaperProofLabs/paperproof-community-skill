@@ -186,6 +186,12 @@ function isControllerManagedSeries(details) {
   );
 }
 
+function isControllerOnlySeries(details) {
+  const authorityMode = details?.series?.seriesAuthorityMode;
+  if (authorityMode != null) return Number(authorityMode) === 3;
+  return (details?.series?.seriesAuthorityModeName ?? details?.controlSnapshot?.authorityModeName ?? null) === 'controller_only';
+}
+
 function seriesAuthoritySummary(details) {
   return {
     controllerManaged: isControllerManagedSeries(details),
@@ -221,6 +227,13 @@ function controllerBinding(details) {
   assert(controlRecordId, 'Controller-managed series is missing controlRecordId.');
   assert(controllerNftId, 'Controller-managed series is missing controllerNftId.');
   return { controlRecordId, controllerNftId };
+}
+
+function assertControllerOnlySeries(details) {
+  assert(
+    isControllerOnlySeries(details),
+    `Public add-version flow only supports controller_only series. Current mode: ${details?.series?.seriesAuthorityModeName ?? details?.controlSnapshot?.authorityModeName ?? 'unknown'}.`,
+  );
 }
 
 async function main() {
@@ -295,6 +308,7 @@ async function main() {
 
   const details = await runtime.sdk.query.getSeriesDetails(args.series);
   assert(Number(details.series.artifactType) === ARTIFACT_TYPES.softwareRelease, 'Target series is not a softwareRelease.');
+  assertControllerOnlySeries(details);
   if (signerResult?.ok) {
     assertSignerMatchesSeriesAuthority(details, signerResult.address);
   }
@@ -407,15 +421,13 @@ async function main() {
       { key: 'worktree', value: isDirty ? 'dirty' : 'clean' },
     ],
   };
-  const tx = isControllerManagedSeries(details)
-    ? txb.addSoftwareReleaseVersionWithController({
-      ...versionInput,
-      ...controllerBinding(details),
-      versionChangeNote: args['version-change-note']
-        ?? args.versionChangeNote
-        ?? changelog,
-    })
-    : txb.addSoftwareReleaseVersion(versionInput);
+  const tx = txb.addSoftwareReleaseVersion({
+    ...versionInput,
+    ...controllerBinding(details),
+    versionChangeNote: args['version-change-note']
+      ?? args.versionChangeNote
+      ?? changelog,
+  });
   tx.setSenderIfNotSet(signerResult.address);
 
   let execution;

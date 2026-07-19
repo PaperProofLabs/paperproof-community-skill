@@ -30,7 +30,7 @@ Diagnose by layer. Do not collapse every failure into a generic publish failure.
 | JSON-RPC object read failure such as `multiGetObjects` | endpoint reachable but object read path is flaky | Retry with backoff, then separate "confirmation failed" from "transaction failed" in the operator report |
 | Upload and transaction digest exist but `latestVersionConfirmed=false` | write may have succeeded, but readback confirmation path failed | Do not assume add-version failed; re-run the helper's confirmation command or `query-series.mjs` |
 | Walrus upload failed after several `BlobRegistered` successes from the same signer | earlier attempts may already have left usable blob objects on-chain | Query recent transactions and blob objects before re-uploading the same bytes; if a certified blob exists, reuse it rather than starting from zero |
-| Add-version is rejected on a valid owned series after controller/NFT rollout | the series is controller-managed and the legacy owner-only builder was used | Re-read the series, inspect controller fields, and switch to the matching controller-aware builder |
+| Add-version is rejected on a valid owned series after controller/NFT rollout | the series is controller-managed but the transaction was built without the required controller binding | Re-read the series, inspect controller fields, and rebuild with `controlRecordId`, `controllerNftId`, and `versionChangeNote` |
 | Artifact detail or API output appears to use the same text for description and changelog | downstream tool collapsed `seriesDescription` and `versionChangeNote` | Re-read series and version views separately and report them by their distinct meanings |
 
 ## Operator Notes
@@ -43,9 +43,9 @@ For community publish helpers, classify failures in this order:
 - chain result could not be observed from returned events
 - latest version confirmation failed after a transaction digest was obtained
 
-For controller-aware add-version flows, also classify:
+For controller-bound add-version flows, also classify:
 
-- legacy builder mismatch before transaction submission
+- controller-binding mismatch before transaction submission
 - controller NFT / control record resolution failure
 - controller authority rejection from Move
 

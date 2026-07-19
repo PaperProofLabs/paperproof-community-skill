@@ -651,6 +651,10 @@ async function main() {
   const published = extractPublishResult(toSdkResponse(execution), runtime.deployment);
   assert(published.artifactType === ARTIFACT_TYPES.blogPost, `Unexpected artifact type ${published.artifactType}.`);
   const details = await runtime.sdk.query.getSeriesDetails(published.seriesId);
+  assert(
+    (details?.series?.seriesAuthorityModeName ?? details?.controlSnapshot?.authorityModeName ?? null) === 'controller_only',
+    `Newly published blog series must be controller_only. Current mode: ${details?.series?.seriesAuthorityModeName ?? details?.controlSnapshot?.authorityModeName ?? 'unknown'}.`,
+  );
 
   const report = {
     ...baseReport,

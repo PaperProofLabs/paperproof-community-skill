@@ -84,8 +84,8 @@ Use this order when replacing the latest content of an existing series:
 9. Query the series again and verify `currentVersionId` and content hash.
 
 When the series is controller-managed, treat `versionChangeNote` as part of the
-required add-version input set and prefer controller-aware builders from the
-start instead of letting the transaction fail on chain first.
+required add-version input set and use the standard controller-bound builders
+from the start instead of letting the transaction fail on chain first.
 
 ## Intent Checklist
 

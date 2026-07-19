@@ -110,7 +110,7 @@ export function classifyOperatorError(error, context = {}) {
   if (textHas(text, 'legacy write path disabled', 'invalid control record', 'invalid controller nft', 'controller transfer locked')) {
     result.category = 'permission';
     result.code = 'CONTROLLER_AUTHORITY_REQUIRED';
-    result.summary = 'This series requires the controller-aware write path or a valid controller NFT binding.';
+    result.summary = 'This series requires the controller-bound write path with a valid controller NFT binding.';
     return result;
   }
 
@@ -453,7 +453,6 @@ export async function runPublishPreflight({
       controlRecordId: details.series.seriesControlRecordId ?? details.controlSnapshot?.controlRecordId ?? null,
       controllerNftId: details.series.seriesControllerNftId ?? details.controlSnapshot?.controllerNftId ?? null,
       controllerHolder: details.controlSnapshot?.controllerHolder ?? null,
-      currentControllerMirror: details.controlSnapshot?.currentControllerMirror ?? null,
       currentVersion: details.series.currentVersion,
       currentVersionId: details.series.currentVersionId,
       currentContentHash: details.currentVersion?.contentHash ?? null,

@@ -112,7 +112,7 @@ Current community helper strategy:
 6. Upload the new bytes to Walrus.
    Use a 10-epoch storage baseline unless the user explicitly asks for a different Walrus retention period.
 7. Build the typed add-version transaction: `addBlogPostVersion`, `addTechnicalReportVersion`, `addDatasetVersion`, `addSoftwareReleaseVersion`, `addGenericFileVersion`, or the preprint version flow.
-   If the series is controller-managed, use the matching `...WithController` builder and pass `controlRecordId`, `controllerNftId`, and `versionChangeNote`.
+   For writable series on current mainnet, treat the standard add-version builders as controller-bound and pass `controlRecordId`, `controllerNftId`, and `versionChangeNote`.
 8. Execute and distinguish four operator-facing states:
    `uploadOk`, `transactionSubmitted`, `chainResultObserved`, and `latestVersionConfirmed`.
 9. If the final latest-version readback fails, do not treat that alone as a confirmed chain failure.
@@ -157,10 +157,10 @@ Recommended community default:
 - query path on `fallback`
 - explicit preflight before `--run`
 
-Controller-aware default:
+Controller-bound default:
 
 - resolve the series first and inspect `seriesControlEnabled`, `seriesAuthorityModeName`, `seriesControlRecordId`, and `seriesControllerNftId`;
-- if controller state is present, do not fall back to legacy owner-only add-version flows.
+- use the controller binding exposed by the series read and do not assume any alternate privileged write path.
 
 ## Preprint Reserved Flow
 

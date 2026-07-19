@@ -3,10 +3,10 @@
 Install:
 
 ```bash
-npm install @paperproof/sdk-ts@0.2.8 @mysten/sui@^2.16.0
+npm install @paperproof/sdk-ts@0.3.0 @mysten/sui@^2.16.0
 ```
 
-Use `0.2.8` as the known-compatible baseline captured by this skill. If a newer SDK is installed, inspect its release notes or exported `MAINNET_DEPLOYMENT` before writing to mainnet.
+Use `0.3.0` as the known-compatible baseline captured by this skill. If a newer SDK is installed, inspect its release notes or exported `MAINNET_DEPLOYMENT` before writing to mainnet.
 
 Initialize:
 
@@ -73,24 +73,11 @@ Supported add-version builders:
 - `addSoftwareReleaseVersion(input)`
 - `addGenericFileVersion(input)`
 
-Controller-aware add-version builders:
-
-- `addPreprintVersionWithController(input)`
-- `addBlogPostVersionWithController(input)`
-- `addTechnicalReportVersionWithController(input)`
-- `addDatasetVersionWithController(input)`
-- `addSoftwareReleaseVersionWithController(input)`
-- `addGenericFileVersionWithController(input)`
-
 Other builders:
 
-- `updateSeriesMetadata(seriesId, metadata)`
-- `updateSeriesMetadataWithController(input)`
-- `updateSeriesDescriptionWithController(input)`
+- `updateSeriesMetadata(input)`
+- `updateSeriesDescription(input)`
 - `transferArtifactOwner(input)`
-- `transferArtifactOwnerWithController(input)`
-- `promoteExistingSeriesToControllerPrimary(input)`
-- `promoteExistingSeriesToControllerOnly(input)`
 - `paperproof.txb.prompts.registerPrompt(input)`
 - `paperproof.txb.memory.createEntry(input)`
 - `paperproof.txb.memory.updatePointer(input)`
@@ -98,9 +85,9 @@ Other builders:
 
 Comments/controller builders to look for:
 
-- `paperproof.txb.comments.setTreeStatusWithController(input)`
-- `paperproof.txb.comments.setCommentStatusWithController(input)`
-- `paperproof.txb.comments.transferTreeOwnerWithController(input)`
+- `paperproof.txb.comments.setTreeStatus(input)`
+- `paperproof.txb.comments.setCommentStatus(input)`
+- `paperproof.txb.comments.transferTreeOwner(input)`
 
 ## Execution Pattern
 
@@ -166,7 +153,7 @@ Interpretation rules:
 
 - `seriesDescription` belongs to the stable artifact series, not one specific version.
 - `versionChangeNote` belongs to a specific version and is the preferred changelog/release-note field.
-- If `seriesControlEnabled=true` and controller IDs are present, prefer controller-aware write builders instead of legacy owner-only flows.
+- If `seriesControlEnabled=true` and controller IDs are present, pass them through the standard write builders for add-version, series updates, and comments-tree control.
 
 ## If the SDK Is Missing
 

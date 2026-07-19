@@ -366,6 +366,12 @@ function isControllerManagedSeries(details) {
   );
 }
 
+function isControllerOnlySeries(details) {
+  const authorityMode = details?.series?.seriesAuthorityMode;
+  if (authorityMode != null) return Number(authorityMode) === 3;
+  return (details?.series?.seriesAuthorityModeName ?? details?.controlSnapshot?.authorityModeName ?? null) === 'controller_only';
+}
+
 function seriesAuthoritySummary(details) {
   return {
     controllerManaged: isControllerManagedSeries(details),
@@ -401,6 +407,13 @@ function controllerBinding(details) {
   assert(controlRecordId, 'Controller-managed series is missing controlRecordId.');
   assert(controllerNftId, 'Controller-managed series is missing controllerNftId.');
   return { controlRecordId, controllerNftId };
+}
+
+function assertControllerOnlySeries(details) {
+  assert(
+    isControllerOnlySeries(details),
+    `Public add-version flow only supports controller_only series. Current mode: ${details?.series?.seriesAuthorityModeName ?? details?.controlSnapshot?.authorityModeName ?? 'unknown'}.`,
+  );
 }
 
 function toSdkResponse(execution) {
@@ -530,6 +543,7 @@ async function main() {
 
   const view = await runtime.sdk.query.getSeriesDetails(args.series);
   assert(view.series.artifactType === expectedArtifactType(type), `Series artifact type ${view.series.artifactType} does not match ${type}.`);
+  assertControllerOnlySeries(view);
   if (signerResult?.ok) {
     assertSignerMatchesSeriesAuthority(view, signerResult.address);
   }
@@ -604,35 +618,29 @@ async function main() {
     : type === 'technicalReport'
       ? technicalReportInput(args, content, upload, view.currentVersion)
       : genericFileInput(args, content, upload, view.currentVersion);
-  const tx = isControllerManagedSeries(view)
-    ? (() => {
-      const binding = controllerBinding(view);
-      const versionChangeNote = args['version-change-note']
-        ?? args.versionChangeNote
-        ?? `Version update from local file on ${new Date().toISOString()}`;
-      return type === 'preprint'
-        ? txb.addPreprintVersionWithController({
+  const tx = (() => {
+    const binding = controllerBinding(view);
+    const versionChangeNote = args['version-change-note']
+      ?? args.versionChangeNote
+      ?? `Version update from local file on ${new Date().toISOString()}`;
+    return type === 'preprint'
+      ? txb.addPreprintVersion({
+        ...input,
+        ...binding,
+        versionChangeNote,
+      })
+      : type === 'technicalReport'
+        ? txb.addTechnicalReportVersion({
           ...input,
           ...binding,
           versionChangeNote,
         })
-        : type === 'technicalReport'
-          ? txb.addTechnicalReportVersionWithController({
-            ...input,
-            ...binding,
-            versionChangeNote,
-          })
-          : txb.addGenericFileVersionWithController({
-            ...input,
-            ...binding,
-            versionChangeNote,
-          });
-    })()
-    : type === 'preprint'
-      ? txb.addPreprintVersion(input)
-      : type === 'technicalReport'
-        ? txb.addTechnicalReportVersion(input)
-        : txb.addGenericFileVersion(input);
+        : txb.addGenericFileVersion({
+          ...input,
+          ...binding,
+          versionChangeNote,
+        });
+  })();
   tx.setSenderIfNotSet(signerResult.address);
 
   let execution;

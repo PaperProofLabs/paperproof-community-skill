@@ -31,8 +31,7 @@ If the request is broad, ask one short clarifying question only when the missing
 - Use the current protocol content model correctly:
   - `seriesDescription` is the artifact-level description for the stable series identity.
   - `versionChangeNote` is the per-version update note and should not replace the series description.
-- When a series is controller-managed, use controller-aware builders by default for add-version, owner transfer, and comments-tree control; treat legacy owner-only builders as compatibility-only fallback.
-- If the caller asks about a controller-managed series on mainnet, describe controller-aware behavior as the normal path and legacy owner-only behavior as compatibility-only history.
+- When a series is controller-managed, use the standard controller-bound builders for add-version, owner transfer, and comments-tree control.
 
 ## When Not To Use This Skill
 
@@ -78,14 +77,14 @@ If the request is broad, ask one short clarifying question only when the missing
 6. For writes, return an unsigned transaction or ask the user's wallet/signer to review and sign.
 7. After execution, extract and report artifact code, series ID, version ID, comments tree ID, likes book ID, Walrus blob ID/object ID, transaction digest, and preview URL if available.
 8. For reads, distinguish missing data, expired Walrus content, non-canonical events, and temporary transport failures.
-9. If the workflow is controller-managed, report whether the series is still `legacy_owner_only` or already uses controller-aware authority.
+9. If the workflow is controller-managed, report the resolved controller binding and whether the signer holds the controller NFT required for the write.
 
 ## Package Baseline
 
 Use the published TypeScript SDK when possible:
 
 ```bash
-npm install @paperproof/sdk-ts@0.2.8 @mysten/sui@^2.16.0
+npm install @paperproof/sdk-ts@0.3.0 @mysten/sui@^2.16.0
 ```
 
 Initialize with:
