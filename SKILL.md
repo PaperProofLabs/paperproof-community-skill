@@ -31,7 +31,8 @@ If the request is broad, ask one short clarifying question only when the missing
 - Use the current protocol content model correctly:
   - `seriesDescription` is the artifact-level description for the stable series identity.
   - `versionChangeNote` is the per-version update note and should not replace the series description.
-- When a series is controller-managed, assume add-version, owner transfer, and comments-tree control may require controller-aware builders instead of legacy owner-only builders.
+- When a series is controller-managed, use controller-aware builders by default for add-version, owner transfer, and comments-tree control; treat legacy owner-only builders as compatibility-only fallback.
+- If the caller asks about a controller-managed series on mainnet, describe controller-aware behavior as the normal path and legacy owner-only behavior as compatibility-only history.
 
 ## When Not To Use This Skill
 
