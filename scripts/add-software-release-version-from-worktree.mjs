@@ -178,6 +178,51 @@ async function writeReport(reportDir, prefix, report) {
   return reportPath;
 }
 
+function isControllerManagedSeries(details) {
+  return Boolean(
+    details?.series?.seriesControlEnabled
+    || details?.series?.seriesControlRecordId
+    || details?.series?.seriesControllerNftId,
+  );
+}
+
+function seriesAuthoritySummary(details) {
+  return {
+    controllerManaged: isControllerManagedSeries(details),
+    authorityMode: details?.series?.seriesAuthorityModeName ?? details?.controlSnapshot?.authorityModeName ?? null,
+    seriesOwner: details?.series?.owner ?? null,
+    controllerHolder: details?.controlSnapshot?.controllerHolder ?? null,
+    controlRecordId: details?.series?.seriesControlRecordId ?? details?.controlSnapshot?.controlRecordId ?? null,
+    controllerNftId: details?.series?.seriesControllerNftId ?? details?.controlSnapshot?.controllerNftId ?? null,
+  };
+}
+
+function assertSignerMatchesSeriesAuthority(details, signerAddress) {
+  if (!signerAddress) return;
+  const normalizedSigner = normalizeAddress(signerAddress);
+  if (isControllerManagedSeries(details)) {
+    const holder = details?.controlSnapshot?.controllerHolder;
+    assert(holder, 'Series is controller-managed but no controller holder could be resolved from chain.');
+    assert(
+      normalizeAddress(holder) === normalizedSigner,
+      `Controller holder ${holder} does not match signer ${signerAddress}.`,
+    );
+    return;
+  }
+  assert(
+    normalizeAddress(details.series.owner) === normalizedSigner,
+    `Series owner ${details.series.owner} does not match signer ${signerAddress}.`,
+  );
+}
+
+function controllerBinding(details) {
+  const controlRecordId = details?.series?.seriesControlRecordId ?? details?.controlSnapshot?.controlRecordId ?? null;
+  const controllerNftId = details?.series?.seriesControllerNftId ?? details?.controlSnapshot?.controllerNftId ?? null;
+  assert(controlRecordId, 'Controller-managed series is missing controlRecordId.');
+  assert(controllerNftId, 'Controller-managed series is missing controllerNftId.');
+  return { controlRecordId, controllerNftId };
+}
+
 async function main() {
   const args = parseArgs();
   if (args.help) {
@@ -251,7 +296,7 @@ async function main() {
   const details = await runtime.sdk.query.getSeriesDetails(args.series);
   assert(Number(details.series.artifactType) === ARTIFACT_TYPES.softwareRelease, 'Target series is not a softwareRelease.');
   if (signerResult?.ok) {
-    assert(normalizeAddress(details.series.owner) === signerResult.address, `Series owner ${details.series.owner} does not match signer ${signerResult.address}.`);
+    assertSignerMatchesSeriesAuthority(details, signerResult.address);
   }
 
   const current = details.currentVersion.rawFields ?? {};
@@ -285,6 +330,7 @@ async function main() {
       zipPath: outputZip,
       zipSize: fileInfo.fileSize,
       contentHash: fileInfo.contentHash,
+      authority: seriesAuthoritySummary(details),
     });
     console.log(stringifyForJson({
       ...baseReport,
@@ -300,6 +346,7 @@ async function main() {
       zipPath: outputZip,
       zipSize: fileInfo.fileSize,
       contentHash: fileInfo.contentHash,
+      authority: seriesAuthoritySummary(details),
       reportPath,
     }));
     return;
@@ -319,6 +366,7 @@ async function main() {
       zipPath: outputZip,
       zipSize: fileInfo.fileSize,
       contentHash: fileInfo.contentHash,
+      authority: seriesAuthoritySummary(details),
       error: createResultError('upload', error, { transport: runtime.transport }),
     });
     console.log(stringifyForJson({
@@ -331,6 +379,7 @@ async function main() {
       zipPath: outputZip,
       zipSize: fileInfo.fileSize,
       contentHash: fileInfo.contentHash,
+      authority: seriesAuthoritySummary(details),
       error: createResultError('upload', error, { transport: runtime.transport }),
       reportPath,
     }));
@@ -338,7 +387,7 @@ async function main() {
   }
 
   const txb = new PaperProofTxBuilder(runtime.deployment);
-  const tx = txb.addSoftwareReleaseVersion({
+  const versionInput = {
     seriesId: args.series,
     projectName,
     versionName,
@@ -357,7 +406,16 @@ async function main() {
       { key: 'commit', value: shortSha },
       { key: 'worktree', value: isDirty ? 'dirty' : 'clean' },
     ],
-  });
+  };
+  const tx = isControllerManagedSeries(details)
+    ? txb.addSoftwareReleaseVersionWithController({
+      ...versionInput,
+      ...controllerBinding(details),
+      versionChangeNote: args['version-change-note']
+        ?? args.versionChangeNote
+        ?? changelog,
+    })
+    : txb.addSoftwareReleaseVersion(versionInput);
   tx.setSenderIfNotSet(signerResult.address);
 
   let execution;
@@ -379,6 +437,7 @@ async function main() {
       contentHash: fileInfo.contentHash,
       uploadOk: true,
       upload,
+      authority: seriesAuthoritySummary(details),
       error: createResultError('transaction', error, { transport: runtime.transport }),
     });
     console.log(stringifyForJson({
@@ -431,6 +490,7 @@ async function main() {
     transactionDigest: execution.digest,
     chainResultObserved: true,
     latestVersionConfirmed: confirmation.ok,
+    authority: seriesAuthoritySummary(details),
     upload,
     confirmation,
     needsManualConfirmation: !confirmation.ok,

@@ -33,6 +33,15 @@ const ADD_VERSION_BUILDERS = {
   genericFile: 'addGenericFileVersion(input)',
 };
 
+const CONTROLLER_ADD_VERSION_BUILDERS = {
+  preprint: 'addPreprintVersionWithController({ ...input, controlRecordId, controllerNftId, versionChangeNote })',
+  blogPost: 'addBlogPostVersionWithController({ ...input, controlRecordId, controllerNftId, versionChangeNote })',
+  technicalReport: 'addTechnicalReportVersionWithController({ ...input, controlRecordId, controllerNftId, versionChangeNote })',
+  dataset: 'addDatasetVersionWithController({ ...input, controlRecordId, controllerNftId, versionChangeNote })',
+  softwareRelease: 'addSoftwareReleaseVersionWithController({ ...input, controlRecordId, controllerNftId, versionChangeNote })',
+  genericFile: 'addGenericFileVersionWithController({ ...input, controlRecordId, controllerNftId, versionChangeNote })',
+};
+
 const METADATA_LIMIT = 4;
 
 function nextSteps(missing, metadataValidationIssues) {
@@ -95,7 +104,7 @@ async function main() {
     missingFields: missing,
     metadataValidationIssues,
     sdkBuilders: mode === 'add-version'
-      ? [ADD_VERSION_BUILDERS[type]]
+      ? [ADD_VERSION_BUILDERS[type], CONTROLLER_ADD_VERSION_BUILDERS[type]]
       : BUILDERS[type],
     walrusRequiredBeforeChainRegistration: true,
     runBeforeWalrusUpload: true,

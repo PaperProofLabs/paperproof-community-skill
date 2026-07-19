@@ -9,6 +9,7 @@ Use this reference to translate natural-language requests into PaperProof protoc
 | "Publish this paper" | New `preprint` or `technicalReport` | Ask whether it is research/preprint or formal report |
 | "Put this file on PaperProof" | New artifact, often `genericFile` | Inspect file type and ask for title/license if missing |
 | "Update this artifact" | Add version | Resolve series ID/artifact code and confirm ownership |
+| "Update this artifact description" | Series metadata update, not necessarily add version | Resolve the series first, then decide whether the user means `seriesDescription` or a new `versionChangeNote` |
 | "Can I publish with this wallet?" | Wallet readiness check | Query SUI and WAL/storage capability |
 | "Is this artifact real?" | Verification | Resolve series/version, check package IDs and events |
 | "Why does the body not load?" | Content/Walrus diagnosis | Read version header and test Walrus blob availability |
@@ -22,6 +23,7 @@ Use this reference to translate natural-language requests into PaperProof protoc
 - File hash and size: run `node scripts/file-digest.mjs <file> <content-type>`.
 - Metadata draft: run `node scripts/metadata-template.mjs <artifactType>`.
 - Publish readiness: run `node scripts/plan-publish.mjs --type=<artifactType> --input=<metadata.json>`.
+- Local Markdown blog dry-run: run `node scripts/publish-blog-post-from-local-file.mjs --file=<path> --summary="..." --tags=tag1,tag2` first without `--run`.
 - Add-version readiness: add `--series=<seriesId>` to `plan-publish.mjs`.
 - Local-file add version dry-run: run `node scripts/add-version-from-local-file.mjs --type=<preprint|technicalReport|genericFile> --series=<seriesId> --file=<path>` first without `--run`.
 - Walrus retention inspection: run `node scripts/extend-walrus-retention.mjs --series-json=<file>` or `--manifest-json=<file>` first without `--run`.
@@ -52,6 +54,8 @@ uploads:
 8. Build and execute the SDK transaction with the user's explicit signer.
 9. Read back the series/version and verify the Walrus blob hash when possible.
 
+For community long-form blogs, prefer `publish-blog-post-from-local-file.mjs` over ad hoc one-off scripts. It packages the Markdown into a PaperProof Markdown zip, runs Walrus upload with a manual fallback path, and reports artifact code, series ID, version ID, blob ID, and transaction digest in one place.
+
 For dataset packages, keep chain metadata sparse. Put source notes, schemas,
 field descriptions, and file manifests inside the zip package rather than in
 `seriesMetadata` or `versionMetadata`.
@@ -63,15 +67,25 @@ Use this order when replacing the latest content of an existing series:
 1. Resolve the target series from the user's artifact code, series ID, wallet
    history, or indexer search, then run `query-series.mjs`.
 2. Confirm artifact type, owner, current version ID, and current content hash.
-3. Hash the local replacement file and stop if the hash already equals current.
-4. Reuse current typed metadata unless the user explicitly requested metadata
+3. Read series-level control state and description semantics before drafting the write:
+   - `seriesDescription`
+   - `seriesControlEnabled`
+   - `seriesAuthorityModeName`
+   - `seriesControlRecordId`
+   - `seriesControllerNftId`
+4. Hash the local replacement file and stop if the hash already equals current.
+5. Reuse current typed metadata unless the user explicitly requested metadata
    changes; put provenance in short `versionMetadata` entries.
-5. Dry-run `add-version-from-local-file.mjs` without signer material, or build
+6. Dry-run `add-version-from-local-file.mjs` without signer material, or build
    the SDK transaction locally without Walrus upload.
-6. Tell the user before writing to Walrus or Sui mainnet.
-7. Upload to Walrus, build the typed add-version transaction, execute with the
+7. Tell the user before writing to Walrus or Sui mainnet.
+8. Upload to Walrus, build the typed add-version transaction, execute with the
    explicit signer or wallet, and extract `extractAddVersionResult`.
-8. Query the series again and verify `currentVersionId` and content hash.
+9. Query the series again and verify `currentVersionId` and content hash.
+
+When the series is controller-managed, treat `versionChangeNote` as part of the
+required add-version input set and prefer controller-aware builders from the
+start instead of letting the transaction fail on chain first.
 
 ## Intent Checklist
 

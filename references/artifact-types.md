@@ -45,6 +45,7 @@ Direct preprint publication is disabled in the current contract. Use reserved-pr
 - `contentType`
 
 Use `application/vnd.paperproof.markdown-package+zip` when the post may include Markdown plus images or future assets. Use locked comments for official Blog if policy requires no discussion surface.
+For community long-form articles, the current recommended helper is `scripts/publish-blog-post-from-local-file.mjs`, which packages the Markdown automatically and publishes a new `blogPost` series.
 
 ### Technical Report
 

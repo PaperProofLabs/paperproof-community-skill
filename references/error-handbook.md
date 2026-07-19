@@ -24,10 +24,14 @@ Diagnose by layer. Do not collapse every failure into a generic publish failure.
 | Invalid params from chain read | wrong provider method shape or object/event query params | Check SDK provider adapter and endpoint compatibility |
 | Stale shared object error | transaction built against old shared object versions | Rebuild PTB and retry once |
 | `add-version-from-local-file.mjs` fails with `fetch failed` during Walrus upload | local gRPC transport is unstable while upload relay HTTP is still usable | Retry with the helper's manual Walrus fallback path, which builds register/certify transactions locally and keeps the same add-version workflow |
+| `publish-blog-post-from-local-file.mjs` or another publish helper shows `BlobRegistered` success, but later fails on `certify` | Walrus shared objects changed version between register and certify | Wait for the blob object to become readable, rebuild the certify PTB, and treat this as a Walrus-stage conflict rather than a content or metadata problem |
 | `ECONNRESET` or TLS reset before RPC handshake | endpoint path is unstable, often before JSON-RPC or gRPC can complete | Switch the helper to `--transport=jsonrpc`, retry, and keep the exact RPC URL in the report |
 | gRPC `GetFunction` / `GetBalance` / `UNAVAILABLE` | gRPC provider path is degraded | Prefer `--transport=jsonrpc` for read/write preparation and keep gRPC only when explicitly needed |
 | JSON-RPC object read failure such as `multiGetObjects` | endpoint reachable but object read path is flaky | Retry with backoff, then separate "confirmation failed" from "transaction failed" in the operator report |
 | Upload and transaction digest exist but `latestVersionConfirmed=false` | write may have succeeded, but readback confirmation path failed | Do not assume add-version failed; re-run the helper's confirmation command or `query-series.mjs` |
+| Walrus upload failed after several `BlobRegistered` successes from the same signer | earlier attempts may already have left usable blob objects on-chain | Query recent transactions and blob objects before re-uploading the same bytes; if a certified blob exists, reuse it rather than starting from zero |
+| Add-version is rejected on a valid owned series after controller/NFT rollout | the series is controller-managed and the legacy owner-only builder was used | Re-read the series, inspect controller fields, and switch to the matching controller-aware builder |
+| Artifact detail or API output appears to use the same text for description and changelog | downstream tool collapsed `seriesDescription` and `versionChangeNote` | Re-read series and version views separately and report them by their distinct meanings |
 
 ## Operator Notes
 
@@ -38,6 +42,24 @@ For community publish helpers, classify failures in this order:
 - transaction submission failed
 - chain result could not be observed from returned events
 - latest version confirmation failed after a transaction digest was obtained
+
+For controller-aware add-version flows, also classify:
+
+- legacy builder mismatch before transaction submission
+- controller NFT / control record resolution failure
+- controller authority rejection from Move
+
+For new `blogPost` publication, use a parallel classification:
+
+- preflight failed before any write
+- Walrus register failed
+- Walrus certify failed after a successful register
+- PaperProof publish transaction failed
+- published artifact confirmation failed
+
+`Walrus certify failed after a successful register` is especially important:
+this often means the bytes and signer were fine, and the failure was caused by
+shared-object churn on Walrus mainnet rather than by the PaperProof protocol.
 
 Only the first three states should be treated as clear publish failures. The last two require follow-up confirmation before concluding the chain write failed.
 

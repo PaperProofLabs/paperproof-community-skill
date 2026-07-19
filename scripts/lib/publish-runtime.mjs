@@ -100,10 +100,17 @@ export function classifyOperatorError(error, context = {}) {
     return result;
   }
 
-  if (textHas(text, 'series owner', 'does not match signer')) {
+  if (textHas(text, 'series owner', 'controller holder', 'does not match signer')) {
     result.category = 'permission';
-    result.code = 'SERIES_OWNER_MISMATCH';
-    result.summary = 'Signer is not the owner of the target series.';
+    result.code = 'SERIES_AUTHORITY_MISMATCH';
+    result.summary = 'Signer does not match the current authority for the target series.';
+    return result;
+  }
+
+  if (textHas(text, 'legacy write path disabled', 'invalid control record', 'invalid controller nft', 'controller transfer locked')) {
+    result.category = 'permission';
+    result.code = 'CONTROLLER_AUTHORITY_REQUIRED';
+    result.summary = 'This series requires the controller-aware write path or a valid controller NFT binding.';
     return result;
   }
 
@@ -437,6 +444,16 @@ export async function runPublishPreflight({
       artifactCode: details.series.artifactCode,
       artifactType: details.series.artifactType,
       owner: details.series.owner,
+      controllerManaged: Boolean(
+        details.series.seriesControlEnabled
+        || details.series.seriesControlRecordId
+        || details.series.seriesControllerNftId,
+      ),
+      authorityMode: details.series.seriesAuthorityModeName ?? details.controlSnapshot?.authorityModeName ?? null,
+      controlRecordId: details.series.seriesControlRecordId ?? details.controlSnapshot?.controlRecordId ?? null,
+      controllerNftId: details.series.seriesControllerNftId ?? details.controlSnapshot?.controllerNftId ?? null,
+      controllerHolder: details.controlSnapshot?.controllerHolder ?? null,
+      currentControllerMirror: details.controlSnapshot?.currentControllerMirror ?? null,
       currentVersion: details.series.currentVersion,
       currentVersionId: details.series.currentVersionId,
       currentContentHash: details.currentVersion?.contentHash ?? null,

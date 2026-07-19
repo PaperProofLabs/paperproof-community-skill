@@ -358,6 +358,51 @@ function genericFileInput(args, content, upload, currentVersion) {
   };
 }
 
+function isControllerManagedSeries(details) {
+  return Boolean(
+    details?.series?.seriesControlEnabled
+    || details?.series?.seriesControlRecordId
+    || details?.series?.seriesControllerNftId,
+  );
+}
+
+function seriesAuthoritySummary(details) {
+  return {
+    controllerManaged: isControllerManagedSeries(details),
+    authorityMode: details?.series?.seriesAuthorityModeName ?? details?.controlSnapshot?.authorityModeName ?? null,
+    seriesOwner: details?.series?.owner ?? null,
+    controllerHolder: details?.controlSnapshot?.controllerHolder ?? null,
+    controlRecordId: details?.series?.seriesControlRecordId ?? details?.controlSnapshot?.controlRecordId ?? null,
+    controllerNftId: details?.series?.seriesControllerNftId ?? details?.controlSnapshot?.controllerNftId ?? null,
+  };
+}
+
+function assertSignerMatchesSeriesAuthority(details, signerAddress) {
+  if (!signerAddress) return;
+  const normalizedSigner = normalizeAddress(signerAddress);
+  if (isControllerManagedSeries(details)) {
+    const holder = details?.controlSnapshot?.controllerHolder;
+    assert(holder, 'Series is controller-managed but no controller holder could be resolved from chain.');
+    assert(
+      normalizeAddress(holder) === normalizedSigner,
+      `Controller holder ${holder} does not match signer ${signerAddress}.`,
+    );
+    return;
+  }
+  assert(
+    normalizeAddress(details.series.owner) === normalizedSigner,
+    `Series owner ${details.series.owner} does not match signer ${signerAddress}.`,
+  );
+}
+
+function controllerBinding(details) {
+  const controlRecordId = details?.series?.seriesControlRecordId ?? details?.controlSnapshot?.controlRecordId ?? null;
+  const controllerNftId = details?.series?.seriesControllerNftId ?? details?.controlSnapshot?.controllerNftId ?? null;
+  assert(controlRecordId, 'Controller-managed series is missing controlRecordId.');
+  assert(controllerNftId, 'Controller-managed series is missing controllerNftId.');
+  return { controlRecordId, controllerNftId };
+}
+
 function toSdkResponse(execution) {
   return {
     events: (execution.events ?? []).map((event) => ({
@@ -486,7 +531,7 @@ async function main() {
   const view = await runtime.sdk.query.getSeriesDetails(args.series);
   assert(view.series.artifactType === expectedArtifactType(type), `Series artifact type ${view.series.artifactType} does not match ${type}.`);
   if (signerResult?.ok) {
-    assert(normalizeAddress(view.series.owner) === signerResult.address, `Series owner ${view.series.owner} does not match signer ${signerResult.address}.`);
+    assertSignerMatchesSeriesAuthority(view, signerResult.address);
   }
 
   if (content.contentHash === view.currentVersion.contentHash) {
@@ -501,6 +546,7 @@ async function main() {
       currentVersionId: view.series.currentVersionId,
       title: view.currentVersion.rawFields?.title,
       latestVersionConfirmed: true,
+      authority: seriesAuthoritySummary(view),
     };
     const reportPath = await writeReport(reportDir, 'add-version-skipped', skipped);
     console.log(stringifyForJson({ ...skipped, reportPath }));
@@ -519,6 +565,7 @@ async function main() {
       newVersion: String(Number(view.series.currentVersion) + 1),
       newVersionId: ZERO,
       title: view.currentVersion.rawFields?.title,
+      authority: seriesAuthoritySummary(view),
     };
     const reportPath = await writeReport(reportDir, 'add-version-dry-run', dryRun);
     console.log(stringifyForJson({ ...dryRun, reportPath }));
@@ -557,11 +604,35 @@ async function main() {
     : type === 'technicalReport'
       ? technicalReportInput(args, content, upload, view.currentVersion)
       : genericFileInput(args, content, upload, view.currentVersion);
-  const tx = type === 'preprint'
-    ? txb.addPreprintVersion(input)
-    : type === 'technicalReport'
-      ? txb.addTechnicalReportVersion(input)
-      : txb.addGenericFileVersion(input);
+  const tx = isControllerManagedSeries(view)
+    ? (() => {
+      const binding = controllerBinding(view);
+      const versionChangeNote = args['version-change-note']
+        ?? args.versionChangeNote
+        ?? `Version update from local file on ${new Date().toISOString()}`;
+      return type === 'preprint'
+        ? txb.addPreprintVersionWithController({
+          ...input,
+          ...binding,
+          versionChangeNote,
+        })
+        : type === 'technicalReport'
+          ? txb.addTechnicalReportVersionWithController({
+            ...input,
+            ...binding,
+            versionChangeNote,
+          })
+          : txb.addGenericFileVersionWithController({
+            ...input,
+            ...binding,
+            versionChangeNote,
+          });
+    })()
+    : type === 'preprint'
+      ? txb.addPreprintVersion(input)
+      : type === 'technicalReport'
+        ? txb.addTechnicalReportVersion(input)
+        : txb.addGenericFileVersion(input);
   tx.setSenderIfNotSet(signerResult.address);
 
   let execution;
@@ -580,6 +651,7 @@ async function main() {
       previousContentHash: view.currentVersion.contentHash,
       uploadOk: true,
       upload,
+      authority: seriesAuthoritySummary(view),
       error: createResultError('transaction', error, { transport: runtime.transport }),
     });
     console.log(stringifyForJson({
@@ -634,6 +706,7 @@ async function main() {
     newVersion: String(added.version),
     newVersionId: added.versionId,
     title: view.currentVersion.rawFields?.title,
+    authority: seriesAuthoritySummary(view),
     uploadOk: true,
     transactionSubmitted: true,
     transactionDigest: execution.digest,

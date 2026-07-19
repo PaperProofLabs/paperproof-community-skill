@@ -28,6 +28,10 @@ If the request is broad, ask one short clarifying question only when the missing
 - Treat `fallback` as the default query mode when a confirmation read may need a second path.
 - Keep this skill reusable for third-party apps, notebooks, and agents; do not assume official server paths or browser sessions.
 - For local signed flows, prefer user-controlled signer sources in this order: browser wallet, local Sui CLI keystore, then explicit env-managed signer material.
+- Use the current protocol content model correctly:
+  - `seriesDescription` is the artifact-level description for the stable series identity.
+  - `versionChangeNote` is the per-version update note and should not replace the series description.
+- When a series is controller-managed, assume add-version, owner transfer, and comments-tree control may require controller-aware builders instead of legacy owner-only builders.
 
 ## When Not To Use This Skill
 
@@ -47,6 +51,7 @@ If the request is broad, ask one short clarifying question only when the missing
 - If a write depends on shared Sui objects, rebuild the transaction before retrying.
 - If a task touches official registries or governance permissions, confirm the caller has authority before building write transactions.
 - If an add-version run reports `uploadOk=true` but `latestVersionConfirmed=false`, report it as a confirmation-stage problem, not an automatic chain failure.
+- Do not collapse `seriesDescription` and `versionChangeNote` into one field when planning metadata, interpreting chain reads, or explaining results.
 
 ## Reference Routing
 
@@ -72,13 +77,14 @@ If the request is broad, ask one short clarifying question only when the missing
 6. For writes, return an unsigned transaction or ask the user's wallet/signer to review and sign.
 7. After execution, extract and report artifact code, series ID, version ID, comments tree ID, likes book ID, Walrus blob ID/object ID, transaction digest, and preview URL if available.
 8. For reads, distinguish missing data, expired Walrus content, non-canonical events, and temporary transport failures.
+9. If the workflow is controller-managed, report whether the series is still `legacy_owner_only` or already uses controller-aware authority.
 
 ## Package Baseline
 
 Use the published TypeScript SDK when possible:
 
 ```bash
-npm install @paperproof/sdk-ts@0.2.7 @mysten/sui@^2.16.0
+npm install @paperproof/sdk-ts@0.2.8 @mysten/sui@^2.16.0
 ```
 
 Initialize with:
@@ -115,6 +121,7 @@ The `scripts/` folder contains protocol-oriented helpers. They do not require th
 - `query-governance.mjs`: read governance config and a proposal by numeric id or proposal object id.
 - `create-signal-proposal.mjs`: preflight, dry-run, or submit a community governance signal proposal with an explicit signer.
 - `vote-proposal.mjs`: preflight, dry-run, or submit a yes/no vote on an active proposal with an explicit signer.
+- `publish-blog-post-from-local-file.mjs`: dry-run, preflight, or publish a new `blogPost` artifact from a local Markdown file packaged as `application/vnd.paperproof.markdown-package+zip`.
 - `add-version-from-local-file.mjs`: dry-run or execute a controlled add-version flow for a local PDF/file. Dry-run is read-only; `--run` requires an explicit user-controlled signer environment and uploads to Walrus.
 - `extend-walrus-retention.mjs`: inspect current Walrus retention windows for selected artifacts and optionally batch-extend them to a target epoch window.
 

@@ -3,10 +3,10 @@
 Install:
 
 ```bash
-npm install @paperproof/sdk-ts@0.2.7 @mysten/sui@^2.16.0
+npm install @paperproof/sdk-ts@0.2.8 @mysten/sui@^2.16.0
 ```
 
-Use `0.2.7` as the known-compatible baseline captured by this skill. If a newer SDK is installed, inspect its release notes or exported `MAINNET_DEPLOYMENT` before writing to mainnet.
+Use `0.2.8` as the known-compatible baseline captured by this skill. If a newer SDK is installed, inspect its release notes or exported `MAINNET_DEPLOYMENT` before writing to mainnet.
 
 Initialize:
 
@@ -73,14 +73,34 @@ Supported add-version builders:
 - `addSoftwareReleaseVersion(input)`
 - `addGenericFileVersion(input)`
 
+Controller-aware add-version builders:
+
+- `addPreprintVersionWithController(input)`
+- `addBlogPostVersionWithController(input)`
+- `addTechnicalReportVersionWithController(input)`
+- `addDatasetVersionWithController(input)`
+- `addSoftwareReleaseVersionWithController(input)`
+- `addGenericFileVersionWithController(input)`
+
 Other builders:
 
 - `updateSeriesMetadata(seriesId, metadata)`
+- `updateSeriesMetadataWithController(input)`
+- `updateSeriesDescriptionWithController(input)`
 - `transferArtifactOwner(input)`
+- `transferArtifactOwnerWithController(input)`
+- `promoteExistingSeriesToControllerPrimary(input)`
+- `promoteExistingSeriesToControllerOnly(input)`
 - `paperproof.txb.prompts.registerPrompt(input)`
 - `paperproof.txb.memory.createEntry(input)`
 - `paperproof.txb.memory.updatePointer(input)`
 - `paperproof.txb.memory.deleteOwnEntry({ entryId })`
+
+Comments/controller builders to look for:
+
+- `paperproof.txb.comments.setTreeStatusWithController(input)`
+- `paperproof.txb.comments.setCommentStatusWithController(input)`
+- `paperproof.txb.comments.transferTreeOwnerWithController(input)`
 
 ## Execution Pattern
 
@@ -122,6 +142,31 @@ const content = await readAndVerifyWalrusContent(walrusClient, reference);
 ## Deployment Drift
 
 At startup or before important writes, use deployment verification and update checks. If a manifest says packages changed, create an override with `createDeployment(MAINNET_DEPLOYMENT, override)` instead of scattering IDs in application code.
+
+## Read Views That Matter Now
+
+Recent SDK surfaces that downstream tools should consume correctly:
+
+- `ArtifactSeriesView.seriesDescription`
+- `ArtifactSeriesView.seriesControlEnabled`
+- `ArtifactSeriesView.seriesAuthorityMode`
+- `ArtifactSeriesView.seriesAuthorityModeName`
+- `ArtifactSeriesView.seriesControlRecordId`
+- `ArtifactSeriesView.seriesControllerNftId`
+- `ArtifactVersionView.versionChangeNote`
+- `CommentsTreeView.treeControlEnabled`
+- `CommentsTreeView.treeAuthorityMode`
+- `CommentsTreeView.treeAuthorityModeName`
+- `CommentsTreeView.treeControlRecordId`
+- `CommentsTreeView.treeControllerNftId`
+- `ControllerNFTView`
+- `ArtifactControlRecordView`
+
+Interpretation rules:
+
+- `seriesDescription` belongs to the stable artifact series, not one specific version.
+- `versionChangeNote` belongs to a specific version and is the preferred changelog/release-note field.
+- If `seriesControlEnabled=true` and controller IDs are present, prefer controller-aware write builders instead of legacy owner-only flows.
 
 ## If the SDK Is Missing
 
