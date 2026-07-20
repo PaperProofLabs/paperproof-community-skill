@@ -39,9 +39,9 @@ function usage() {
 Add a new version to an existing PaperProof series from a local file.
 
 Usage:
-  node scripts/add-version-from-local-file.mjs --type=technicalReport --series=<seriesId> --file=<path>
-  node scripts/add-version-from-local-file.mjs --preflight --type=technicalReport --series=<seriesId> --file=<path> --signer-env=<env> --account=4
-  node scripts/add-version-from-local-file.mjs --run --type=technicalReport --series=<seriesId> --file=<path> --signer-env=<env> --account=4
+  node scripts/add-version-from-local-file.mjs --type=technicalReport --series=<seriesId> --file=<path> --control-record=<id> --controller-nft=<id>
+  node scripts/add-version-from-local-file.mjs --preflight --type=technicalReport --series=<seriesId> --file=<path> --control-record=<id> --controller-nft=<id> --signer-env=<env> --account=4
+  node scripts/add-version-from-local-file.mjs --run --type=technicalReport --series=<seriesId> --file=<path> --control-record=<id> --controller-nft=<id> --signer-env=<env> --account=4
 
 Modes:
   default         dry run; no mainnet write
@@ -65,6 +65,8 @@ Signer modes:
   --signer-mode=cli-keystore use the local Sui CLI keystore and active address
   --cli-address=<0x...>      pick one CLI keystore address explicitly
   --cli-alias=<name>         pick one CLI alias explicitly
+  --control-record=<id>      required controller control record id for existing-series writes
+  --controller-nft=<id>      required controller NFT id for existing-series writes
 `.trim();
 }
 
@@ -409,6 +411,14 @@ function controllerBinding(details) {
   return { controlRecordId, controllerNftId };
 }
 
+function explicitControllerBinding(args) {
+  const controlRecordId = getArg(args, 'controlRecord', 'control-record');
+  const controllerNftId = getArg(args, 'controllerNft', 'controller-nft');
+  assert(controlRecordId, 'Missing --control-record=<id>. Community add-version flows require an explicit controller binding.');
+  assert(controllerNftId, 'Missing --controller-nft=<id>. Community add-version flows require an explicit controller binding.');
+  return { controlRecordId, controllerNftId };
+}
+
 function assertControllerOnlySeries(details) {
   assert(
     isControllerOnlySeries(details),
@@ -465,6 +475,7 @@ async function main() {
   assert(type === 'preprint' || type === 'technicalReport' || type === 'genericFile', 'Supported --type values for this helper: preprint, technicalReport, genericFile.');
   assert(args.series, 'Missing --series=<seriesId>.');
   assert(args.file, 'Missing --file=<path>.');
+  const binding = explicitControllerBinding(args);
 
   const run = Boolean(args.run);
   const runtime = createSkillRuntime(args);
@@ -544,6 +555,17 @@ async function main() {
   const view = await runtime.sdk.query.getSeriesDetails(args.series);
   assert(view.series.artifactType === expectedArtifactType(type), `Series artifact type ${view.series.artifactType} does not match ${type}.`);
   assertControllerOnlySeries(view);
+  if (isControllerManagedSeries(view)) {
+    const discovered = controllerBinding(view);
+    assert(
+      discovered.controlRecordId === binding.controlRecordId,
+      `Explicit control record ${binding.controlRecordId} does not match series binding ${discovered.controlRecordId}.`,
+    );
+    assert(
+      discovered.controllerNftId === binding.controllerNftId,
+      `Explicit controller NFT ${binding.controllerNftId} does not match series binding ${discovered.controllerNftId}.`,
+    );
+  }
   if (signerResult?.ok) {
     assertSignerMatchesSeriesAuthority(view, signerResult.address);
   }
@@ -619,7 +641,6 @@ async function main() {
       ? technicalReportInput(args, content, upload, view.currentVersion)
       : genericFileInput(args, content, upload, view.currentVersion);
   const tx = (() => {
-    const binding = controllerBinding(view);
     const versionChangeNote = args['version-change-note']
       ?? args.versionChangeNote
       ?? `Version update from local file on ${new Date().toISOString()}`;

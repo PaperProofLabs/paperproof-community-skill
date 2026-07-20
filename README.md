@@ -31,6 +31,14 @@ entrypoint.
 - Supporting community automation, bot workflows, and agent-based integrations
 - Providing a reusable alternative to website-only interaction flows
 
+Community write policy for existing series:
+
+- Existing-series writes are controller-bound.
+- Community add-version flows must pass `controlRecordId` and `controllerNftId`
+  explicitly.
+- The helper scripts verify that the explicit binding matches the target series
+  before building the write transaction.
+
 ## What This Repository Is Not
 
 - Not an official private operations repository

@@ -153,7 +153,7 @@ Interpretation rules:
 
 - `seriesDescription` belongs to the stable artifact series, not one specific version.
 - `versionChangeNote` belongs to a specific version and is the preferred changelog/release-note field.
-- If `seriesControlEnabled=true` and controller IDs are present, pass them through the standard write builders for add-version, series updates, and comments-tree control.
+- For community writes against an existing series, resolve these fields first and then pass explicit `controlRecordId` and `controllerNftId` into the standard write builders for add-version, series updates, and comments-tree control.
 
 ## If the SDK Is Missing
 

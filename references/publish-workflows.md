@@ -112,7 +112,7 @@ Current community helper strategy:
 6. Upload the new bytes to Walrus.
    Use a 10-epoch storage baseline unless the user explicitly asks for a different Walrus retention period.
 7. Build the typed add-version transaction: `addBlogPostVersion`, `addTechnicalReportVersion`, `addDatasetVersion`, `addSoftwareReleaseVersion`, `addGenericFileVersion`, or the preprint version flow.
-   For writable series on current mainnet, treat the standard add-version builders as controller-bound and pass `controlRecordId`, `controllerNftId`, and `versionChangeNote`.
+   For writable series on current mainnet, treat the standard add-version builders as controller-bound and pass explicit `controlRecordId`, `controllerNftId`, and `versionChangeNote`.
 8. Execute and distinguish four operator-facing states:
    `uploadOk`, `transactionSubmitted`, `chainResultObserved`, and `latestVersionConfirmed`.
 9. If the final latest-version readback fails, do not treat that alone as a confirmed chain failure.
@@ -137,6 +137,8 @@ Recommended practice:
 `add-version-from-local-file.mjs` supports transport and readiness controls so community users can adapt to endpoint instability without changing protocol flow:
 
 - `--preflight`
+- `--control-record=<id>`
+- `--controller-nft=<id>`
 - `--signer-mode=auto|single-env|indexed-env|cli-keystore`
 - `--signer-env=<path>`
 - `--cli-config-dir=<path>`
@@ -160,7 +162,9 @@ Recommended community default:
 Controller-bound default:
 
 - resolve the series first and inspect `seriesControlEnabled`, `seriesAuthorityModeName`, `seriesControlRecordId`, and `seriesControllerNftId`;
-- use the controller binding exposed by the series read and do not assume any alternate privileged write path.
+- use the series read only to verify the intended binding;
+- pass `controlRecordId` and `controllerNftId` explicitly into the community add-version helper or SDK write call;
+- do not assume any alternate privileged write path.
 
 ## Preprint Reserved Flow
 

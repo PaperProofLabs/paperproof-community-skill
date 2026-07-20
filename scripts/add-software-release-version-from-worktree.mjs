@@ -36,8 +36,8 @@ function usage() {
 Package the current worktree as a zip and add it as a new softwareRelease version.
 
 Usage:
-  node scripts/add-software-release-version-from-worktree.mjs --series=<seriesId> --preflight --signer-env=<env> --account=4
-  node scripts/add-software-release-version-from-worktree.mjs --series=<seriesId> --run --signer-env=<env> --account=4
+  node scripts/add-software-release-version-from-worktree.mjs --series=<seriesId> --control-record=<id> --controller-nft=<id> --preflight --signer-env=<env> --account=4
+  node scripts/add-software-release-version-from-worktree.mjs --series=<seriesId> --control-record=<id> --controller-nft=<id> --run --signer-env=<env> --account=4
 
 Options:
   --series=<seriesId>                target software release series
@@ -47,6 +47,8 @@ Options:
   --license=<spdx>                  defaults to current version license
   --changelog=<text>                defaults to a generated note
   --source-hash=<text>              defaults to git:<shortsha>[+dirty]
+  --control-record=<id>             required controller control record id
+  --controller-nft=<id>             required controller NFT id
   --report-dir=<dir>                defaults to ./artifacts
   --output-zip=<path>               defaults to ./artifacts/<project>-<timestamp>.zip
   --signer-mode=auto|single-env|indexed-env|cli-keystore
@@ -229,11 +231,12 @@ function controllerBinding(details) {
   return { controlRecordId, controllerNftId };
 }
 
-function assertControllerOnlySeries(details) {
-  assert(
-    isControllerOnlySeries(details),
-    `Public add-version flow only supports controller_only series. Current mode: ${details?.series?.seriesAuthorityModeName ?? details?.controlSnapshot?.authorityModeName ?? 'unknown'}.`,
-  );
+function explicitControllerBinding(args) {
+  const controlRecordId = getArg(args, 'controlRecord', 'control-record');
+  const controllerNftId = getArg(args, 'controllerNft', 'controller-nft');
+  assert(controlRecordId, 'Missing --control-record=<id>. Community add-version flows require an explicit controller binding.');
+  assert(controllerNftId, 'Missing --controller-nft=<id>. Community add-version flows require an explicit controller binding.');
+  return { controlRecordId, controllerNftId };
 }
 
 async function main() {
@@ -244,6 +247,7 @@ async function main() {
   }
 
   assert(args.series, 'Missing --series=<seriesId>.');
+  const explicitBinding = explicitControllerBinding(args);
   const run = Boolean(args.run);
   const runtime = createSkillRuntime(args);
   const reportDir = path.resolve(args['report-dir'] ?? path.join(SKILL_ROOT, 'artifacts'));
@@ -308,7 +312,21 @@ async function main() {
 
   const details = await runtime.sdk.query.getSeriesDetails(args.series);
   assert(Number(details.series.artifactType) === ARTIFACT_TYPES.softwareRelease, 'Target series is not a softwareRelease.');
-  assertControllerOnlySeries(details);
+  assert(
+    isControllerOnlySeries(details),
+    `Community add-version flow only supports controller_only series. Current mode: ${details?.series?.seriesAuthorityModeName ?? details?.controlSnapshot?.authorityModeName ?? 'unknown'}.`,
+  );
+  if (isControllerManagedSeries(details)) {
+    const discoveredBinding = controllerBinding(details);
+    assert(
+      discoveredBinding.controlRecordId === explicitBinding.controlRecordId,
+      `Explicit control record ${explicitBinding.controlRecordId} does not match series binding ${discoveredBinding.controlRecordId}.`,
+    );
+    assert(
+      discoveredBinding.controllerNftId === explicitBinding.controllerNftId,
+      `Explicit controller NFT ${explicitBinding.controllerNftId} does not match series binding ${discoveredBinding.controllerNftId}.`,
+    );
+  }
   if (signerResult?.ok) {
     assertSignerMatchesSeriesAuthority(details, signerResult.address);
   }
@@ -416,17 +434,16 @@ async function main() {
     contentType: 'application/zip',
     versionMetadata: [
       { key: 'release_kind', value: 'codex-skill' },
-      { key: 'packaging', value: 'git archive zip' },
       { key: 'commit', value: shortSha },
       { key: 'worktree', value: isDirty ? 'dirty' : 'clean' },
     ],
-  };
-  const tx = txb.addSoftwareReleaseVersion({
-    ...versionInput,
-    ...controllerBinding(details),
     versionChangeNote: args['version-change-note']
       ?? args.versionChangeNote
       ?? changelog,
+  };
+  const tx = txb.addSoftwareReleaseVersion({
+    ...versionInput,
+    ...explicitBinding,
   });
   tx.setSenderIfNotSet(signerResult.address);
 

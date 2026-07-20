@@ -32,6 +32,7 @@ If the request is broad, ask one short clarifying question only when the missing
   - `seriesDescription` is the artifact-level description for the stable series identity.
   - `versionChangeNote` is the per-version update note and should not replace the series description.
 - When a series is controller-managed, use the standard controller-bound builders for add-version, owner transfer, and comments-tree control.
+- For community writes against an existing series, require explicit `controlRecordId` and `controllerNftId` inputs instead of relying on automatic binding discovery.
 
 ## When Not To Use This Skill
 
@@ -52,6 +53,7 @@ If the request is broad, ask one short clarifying question only when the missing
 - If a task touches official registries or governance permissions, confirm the caller has authority before building write transactions.
 - If an add-version run reports `uploadOk=true` but `latestVersionConfirmed=false`, report it as a confirmation-stage problem, not an automatic chain failure.
 - Do not collapse `seriesDescription` and `versionChangeNote` into one field when planning metadata, interpreting chain reads, or explaining results.
+- Do not use community add-version helpers without explicit `controlRecordId` and `controllerNftId` for the target series.
 
 ## Reference Routing
 
@@ -77,7 +79,7 @@ If the request is broad, ask one short clarifying question only when the missing
 6. For writes, return an unsigned transaction or ask the user's wallet/signer to review and sign.
 7. After execution, extract and report artifact code, series ID, version ID, comments tree ID, likes book ID, Walrus blob ID/object ID, transaction digest, and preview URL if available.
 8. For reads, distinguish missing data, expired Walrus content, non-canonical events, and temporary transport failures.
-9. If the workflow is controller-managed, report the resolved controller binding and whether the signer holds the controller NFT required for the write.
+9. If the workflow is controller-managed, report the explicit controller binding used for the write and whether the signer holds the controller NFT required for the write.
 
 ## Package Baseline
 
@@ -122,7 +124,7 @@ The `scripts/` folder contains protocol-oriented helpers. They do not require th
 - `create-signal-proposal.mjs`: preflight, dry-run, or submit a community governance signal proposal with an explicit signer.
 - `vote-proposal.mjs`: preflight, dry-run, or submit a yes/no vote on an active proposal with an explicit signer.
 - `publish-blog-post-from-local-file.mjs`: dry-run, preflight, or publish a new `blogPost` artifact from a local Markdown file packaged as `application/vnd.paperproof.markdown-package+zip`.
-- `add-version-from-local-file.mjs`: dry-run or execute a controlled add-version flow for a local PDF/file. Dry-run is read-only; `--run` requires an explicit user-controlled signer environment and uploads to Walrus.
+- `add-version-from-local-file.mjs`: dry-run or execute a controlled add-version flow for a local PDF/file. Community writes for existing series require explicit `--control-record` and `--controller-nft`; `--run` also requires an explicit user-controlled signer environment and uploads to Walrus.
 - `extend-walrus-retention.mjs`: inspect current Walrus retention windows for selected artifacts and optionally batch-extend them to a target epoch window.
 
 If a helper needs dependencies, run `npm install` in the skill directory. Helpers that write to chain must use the user's explicit wallet/signer. Do not ask community users to reveal secrets; for local signer helpers, the user must already control their own signer environment. Prefer unsigned or dry-run modes until the user has chosen a signer path.

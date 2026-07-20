@@ -25,7 +25,7 @@ Use this reference to translate natural-language requests into PaperProof protoc
 - Publish readiness: run `node scripts/plan-publish.mjs --type=<artifactType> --input=<metadata.json>`.
 - Local Markdown blog dry-run: run `node scripts/publish-blog-post-from-local-file.mjs --file=<path> --summary="..." --tags=tag1,tag2` first without `--run`.
 - Add-version readiness: add `--series=<seriesId>` to `plan-publish.mjs`.
-- Local-file add version dry-run: run `node scripts/add-version-from-local-file.mjs --type=<preprint|technicalReport|genericFile> --series=<seriesId> --file=<path>` first without `--run`.
+- Local-file add version dry-run: run `node scripts/add-version-from-local-file.mjs --type=<preprint|technicalReport|genericFile> --series=<seriesId> --file=<path> --control-record=<id> --controller-nft=<id>` first without `--run`.
 - Walrus retention inspection: run `node scripts/extend-walrus-retention.mjs --series-json=<file>` or `--manifest-json=<file>` first without `--run`.
 - Object inspection: run `node scripts/read-object.mjs --id=<objectId>`.
 - Series inspection: run `node scripts/query-series.mjs --series=<seriesId>`.
@@ -76,16 +76,18 @@ Use this order when replacing the latest content of an existing series:
 4. Hash the local replacement file and stop if the hash already equals current.
 5. Reuse current typed metadata unless the user explicitly requested metadata
    changes; put provenance in short `versionMetadata` entries.
-6. Dry-run `add-version-from-local-file.mjs` without signer material, or build
+6. Dry-run `add-version-from-local-file.mjs` with explicit `controlRecordId`
+   and `controllerNftId`, or build
    the SDK transaction locally without Walrus upload.
 7. Tell the user before writing to Walrus or Sui mainnet.
 8. Upload to Walrus, build the typed add-version transaction, execute with the
    explicit signer or wallet, and extract `extractAddVersionResult`.
 9. Query the series again and verify `currentVersionId` and content hash.
 
-When the series is controller-managed, treat `versionChangeNote` as part of the
-required add-version input set and use the standard controller-bound builders
-from the start instead of letting the transaction fail on chain first.
+When the series is controller-managed, treat `versionChangeNote`,
+`controlRecordId`, and `controllerNftId` as part of the required add-version
+input set and use the standard controller-bound builders from the start instead
+of letting the transaction fail on chain first.
 
 ## Intent Checklist
 
