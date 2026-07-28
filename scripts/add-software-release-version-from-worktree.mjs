@@ -24,6 +24,7 @@ import {
   createResultError,
   createSkillRuntime,
   getArg,
+  rawGetObject,
   runPublishPreflight,
 } from './lib/publish-runtime.mjs';
 
@@ -188,28 +189,99 @@ function isControllerManagedSeries(details) {
   );
 }
 
+function objectFieldsFromRead(result) {
+  return result?.data?.content?.fields
+    ?? result?.content?.fields
+    ?? result?.object?.content?.fields
+    ?? result?.object?.json
+    ?? null;
+}
+
+function objectOwnerFromRead(result) {
+  const owner = result?.data?.owner ?? result?.owner ?? result?.object?.owner ?? null;
+  if (!owner) return null;
+  if (owner.AddressOwner) return owner.AddressOwner;
+  if (owner.address) return owner.address;
+  return null;
+}
+
+function authorityModeNameFromValue(value) {
+  return Number(value) === 3 ? 'controller_only' : null;
+}
+
+async function resolveExplicitControllerState(runtime, seriesId, explicitBinding) {
+  const [controlRecord, controllerNft] = await Promise.all([
+    rawGetObject(runtime.baseClient, runtime.transport, explicitBinding.controlRecordId),
+    rawGetObject(runtime.baseClient, runtime.transport, explicitBinding.controllerNftId),
+  ]);
+  const controlFields = objectFieldsFromRead(controlRecord);
+  const nftFields = objectFieldsFromRead(controllerNft);
+  assert(controlFields, `Control record ${explicitBinding.controlRecordId} is not readable.`);
+  assert(nftFields, `Controller NFT ${explicitBinding.controllerNftId} is not readable.`);
+  assert(
+    String(controlFields.series_id ?? '') === String(seriesId),
+    `Control record ${explicitBinding.controlRecordId} is not bound to series ${seriesId}.`,
+  );
+  assert(
+    String(controlFields.controller_nft_id ?? '') === String(explicitBinding.controllerNftId),
+    `Control record ${explicitBinding.controlRecordId} does not reference controller NFT ${explicitBinding.controllerNftId}.`,
+  );
+  assert(
+    String(nftFields.series_id ?? '') === String(seriesId),
+    `Controller NFT ${explicitBinding.controllerNftId} is not bound to series ${seriesId}.`,
+  );
+  assert(
+    String(nftFields.control_record_id ?? '') === String(explicitBinding.controlRecordId),
+    `Controller NFT ${explicitBinding.controllerNftId} does not reference control record ${explicitBinding.controlRecordId}.`,
+  );
+  const authorityMode = Number(controlFields.authority_mode ?? NaN);
+  assert(authorityMode === 3, `Series ${seriesId} is not controller_only according to control record ${explicitBinding.controlRecordId}.`);
+  return {
+    controllerManaged: true,
+    authorityMode,
+    authorityModeName: String(nftFields.authority_mode_name ?? authorityModeNameFromValue(authorityMode) ?? ''),
+    controlRecordId: explicitBinding.controlRecordId,
+    controllerNftId: explicitBinding.controllerNftId,
+    controllerHolder: objectOwnerFromRead(controllerNft),
+  };
+}
+
+function resolvedAuthorityState(details, explicitControllerState = null) {
+  return {
+    controllerManaged: isControllerManagedSeries(details) || Boolean(explicitControllerState),
+    authorityMode: details?.series?.seriesAuthorityMode ?? details?.controlSnapshot?.authorityMode ?? explicitControllerState?.authorityMode ?? null,
+    authorityModeName: details?.series?.seriesAuthorityModeName ?? details?.controlSnapshot?.authorityModeName ?? explicitControllerState?.authorityModeName ?? null,
+    seriesOwner: details?.series?.owner ?? null,
+    controllerHolder: details?.controlSnapshot?.controllerHolder ?? explicitControllerState?.controllerHolder ?? null,
+    controlRecordId: details?.series?.seriesControlRecordId ?? details?.controlSnapshot?.controlRecordId ?? explicitControllerState?.controlRecordId ?? null,
+    controllerNftId: details?.series?.seriesControllerNftId ?? details?.controlSnapshot?.controllerNftId ?? explicitControllerState?.controllerNftId ?? null,
+  };
+}
+
 function isControllerOnlySeries(details) {
   const authorityMode = details?.series?.seriesAuthorityMode;
   if (authorityMode != null) return Number(authorityMode) === 3;
   return (details?.series?.seriesAuthorityModeName ?? details?.controlSnapshot?.authorityModeName ?? null) === 'controller_only';
 }
 
-function seriesAuthoritySummary(details) {
+function seriesAuthoritySummary(details, explicitControllerState = null) {
+  const state = resolvedAuthorityState(details, explicitControllerState);
   return {
-    controllerManaged: isControllerManagedSeries(details),
-    authorityMode: details?.series?.seriesAuthorityModeName ?? details?.controlSnapshot?.authorityModeName ?? null,
-    seriesOwner: details?.series?.owner ?? null,
-    controllerHolder: details?.controlSnapshot?.controllerHolder ?? null,
-    controlRecordId: details?.series?.seriesControlRecordId ?? details?.controlSnapshot?.controlRecordId ?? null,
-    controllerNftId: details?.series?.seriesControllerNftId ?? details?.controlSnapshot?.controllerNftId ?? null,
+    controllerManaged: state.controllerManaged,
+    authorityMode: state.authorityModeName,
+    seriesOwner: state.seriesOwner,
+    controllerHolder: state.controllerHolder,
+    controlRecordId: state.controlRecordId,
+    controllerNftId: state.controllerNftId,
   };
 }
 
-function assertSignerMatchesSeriesAuthority(details, signerAddress) {
+function assertSignerMatchesSeriesAuthority(details, signerAddress, explicitControllerState = null) {
   if (!signerAddress) return;
   const normalizedSigner = normalizeAddress(signerAddress);
-  if (isControllerManagedSeries(details)) {
-    const holder = details?.controlSnapshot?.controllerHolder;
+  const state = resolvedAuthorityState(details, explicitControllerState);
+  if (state.controllerManaged) {
+    const holder = state.controllerHolder;
     assert(holder, 'Series is controller-managed but no controller holder could be resolved from chain.');
     assert(
       normalizeAddress(holder) === normalizedSigner,
@@ -223,9 +295,10 @@ function assertSignerMatchesSeriesAuthority(details, signerAddress) {
   );
 }
 
-function controllerBinding(details) {
-  const controlRecordId = details?.series?.seriesControlRecordId ?? details?.controlSnapshot?.controlRecordId ?? null;
-  const controllerNftId = details?.series?.seriesControllerNftId ?? details?.controlSnapshot?.controllerNftId ?? null;
+function controllerBinding(details, explicitControllerState = null) {
+  const state = resolvedAuthorityState(details, explicitControllerState);
+  const controlRecordId = state.controlRecordId;
+  const controllerNftId = state.controllerNftId;
   assert(controlRecordId, 'Controller-managed series is missing controlRecordId.');
   assert(controllerNftId, 'Controller-managed series is missing controllerNftId.');
   return { controlRecordId, controllerNftId };
@@ -311,13 +384,14 @@ async function main() {
   }
 
   const details = await runtime.sdk.query.getSeriesDetails(args.series);
+  const explicitControllerState = await resolveExplicitControllerState(runtime, args.series, explicitBinding);
   assert(Number(details.series.artifactType) === ARTIFACT_TYPES.softwareRelease, 'Target series is not a softwareRelease.');
   assert(
-    isControllerOnlySeries(details),
-    `Community add-version flow only supports controller_only series. Current mode: ${details?.series?.seriesAuthorityModeName ?? details?.controlSnapshot?.authorityModeName ?? 'unknown'}.`,
+    isControllerOnlySeries(details) || explicitControllerState.authorityMode === 3,
+    `Community add-version flow only supports controller_only series. Current mode: ${details?.series?.seriesAuthorityModeName ?? details?.controlSnapshot?.authorityModeName ?? explicitControllerState.authorityModeName ?? 'unknown'}.`,
   );
-  if (isControllerManagedSeries(details)) {
-    const discoveredBinding = controllerBinding(details);
+  {
+    const discoveredBinding = controllerBinding(details, explicitControllerState);
     assert(
       discoveredBinding.controlRecordId === explicitBinding.controlRecordId,
       `Explicit control record ${explicitBinding.controlRecordId} does not match series binding ${discoveredBinding.controlRecordId}.`,
@@ -328,7 +402,7 @@ async function main() {
     );
   }
   if (signerResult?.ok) {
-    assertSignerMatchesSeriesAuthority(details, signerResult.address);
+    assertSignerMatchesSeriesAuthority(details, signerResult.address, explicitControllerState);
   }
 
   const current = details.currentVersion.rawFields ?? {};
@@ -362,7 +436,7 @@ async function main() {
       zipPath: outputZip,
       zipSize: fileInfo.fileSize,
       contentHash: fileInfo.contentHash,
-      authority: seriesAuthoritySummary(details),
+      authority: seriesAuthoritySummary(details, explicitControllerState),
     });
     console.log(stringifyForJson({
       ...baseReport,
@@ -378,7 +452,7 @@ async function main() {
       zipPath: outputZip,
       zipSize: fileInfo.fileSize,
       contentHash: fileInfo.contentHash,
-      authority: seriesAuthoritySummary(details),
+      authority: seriesAuthoritySummary(details, explicitControllerState),
       reportPath,
     }));
     return;
@@ -398,7 +472,7 @@ async function main() {
       zipPath: outputZip,
       zipSize: fileInfo.fileSize,
       contentHash: fileInfo.contentHash,
-      authority: seriesAuthoritySummary(details),
+      authority: seriesAuthoritySummary(details, explicitControllerState),
       error: createResultError('upload', error, { transport: runtime.transport }),
     });
     console.log(stringifyForJson({
@@ -411,7 +485,7 @@ async function main() {
       zipPath: outputZip,
       zipSize: fileInfo.fileSize,
       contentHash: fileInfo.contentHash,
-      authority: seriesAuthoritySummary(details),
+      authority: seriesAuthoritySummary(details, explicitControllerState),
       error: createResultError('upload', error, { transport: runtime.transport }),
       reportPath,
     }));
@@ -466,7 +540,7 @@ async function main() {
       contentHash: fileInfo.contentHash,
       uploadOk: true,
       upload,
-      authority: seriesAuthoritySummary(details),
+      authority: seriesAuthoritySummary(details, explicitControllerState),
       error: createResultError('transaction', error, { transport: runtime.transport }),
     });
     console.log(stringifyForJson({
@@ -481,6 +555,7 @@ async function main() {
       contentHash: fileInfo.contentHash,
       uploadOk: true,
       upload,
+      authority: seriesAuthoritySummary(details, explicitControllerState),
       error: createResultError('transaction', error, { transport: runtime.transport }),
       reportPath,
     }));
@@ -519,7 +594,7 @@ async function main() {
     transactionDigest: execution.digest,
     chainResultObserved: true,
     latestVersionConfirmed: confirmation.ok,
-    authority: seriesAuthoritySummary(details),
+    authority: seriesAuthoritySummary(details, explicitControllerState),
     upload,
     confirmation,
     needsManualConfirmation: !confirmation.ok,

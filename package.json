@@ -7,6 +7,7 @@
   "scripts": {
     "check:wallet": "node scripts/check-wallet.mjs",
     "publish:blog:file": "node scripts/publish-blog-post-from-local-file.mjs",
+    "publish:software-release:worktree": "node scripts/add-software-release-version-from-worktree.mjs",
     "add:version:file": "node scripts/add-version-from-local-file.mjs",
     "governance:create-signal": "node scripts/create-signal-proposal.mjs",
     "governance:vote": "node scripts/vote-proposal.mjs",
