@@ -33,6 +33,7 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const SKILL_ROOT = path.resolve(__dirname, '..');
 const CONTENT_TYPE = 'application/vnd.paperproof.markdown-package+zip';
+const FIXED_ZIP_DATE = new Date('2026-01-01T00:00:00.000Z');
 
 let jszipCtor;
 
@@ -106,10 +107,18 @@ function loadJSZip() {
   return jszipCtor;
 }
 
+function zipFileOptions() {
+  return { date: FIXED_ZIP_DATE };
+}
+
 async function loadAccount(args, required) {
   const envSpecified = Boolean(getArg(args, 'signerEnv', 'signer-env'));
   const mode = args.signerMode ?? args['signer-mode'] ?? (args.account ? 'indexed-env' : 'auto');
-  if (!required && !envSpecified && !args.account) return null;
+  const signerHintsPresent = envSpecified
+    || Boolean(args.account)
+    || Boolean(process.env.ADDRESS && process.env.PRIVATE_KEY)
+    || Boolean(process.env.ADDR_1 && process.env.PRIVATE_KEY_1);
+  if (!required && !signerHintsPresent) return null;
   try {
     const accounts = await loadSignerSet(args, { defaultMode: mode });
     const requested = Number(args.account ?? 1);
@@ -332,6 +341,52 @@ function toSdkResponse(execution) {
   };
 }
 
+function objectFieldsFromRead(result) {
+  return result?.data?.content?.fields ?? result?.content?.fields ?? null;
+}
+
+function authorityModeFromExecution(execution) {
+  const event = (execution?.events ?? []).find((item) =>
+    String(item?.type ?? '').endsWith('::ArtifactControlRecordCreatedEvent'),
+  );
+  const mode = event?.parsedJson?.authority_mode;
+  return mode == null ? null : Number(mode);
+}
+
+async function resolvePublishedSeriesReport(runtime, execution, published) {
+  try {
+    const details = await runtime.sdk.query.getSeriesDetails(published.seriesId);
+    const authorityMode = details?.series?.seriesAuthorityModeName ?? details?.controlSnapshot?.authorityModeName ?? null;
+    assert(
+      authorityMode === 'controller_only',
+      `Newly published blog series must be controller_only. Current mode: ${authorityMode ?? 'unknown'}.`,
+    );
+    return {
+      verification: 'sdk-query',
+      verificationWarning: null,
+      seriesOwner: normalizeAddress(details.series.owner),
+      currentVersion: details.series.currentVersion,
+      currentVersionId: details.series.currentVersionId,
+    };
+  } catch (error) {
+    const rawSeries = await rawGetObject(runtime.baseClient, runtime.transport, published.seriesId);
+    const fields = objectFieldsFromRead(rawSeries);
+    assert(fields, `Published series ${published.seriesId} is not readable from raw object fallback.`);
+    const authorityMode = authorityModeFromExecution(execution);
+    assert(
+      authorityMode === 3,
+      `Published series ${published.seriesId} could not confirm controller_only authority mode from execution events.`,
+    );
+    return {
+      verification: 'raw-object-fallback',
+      verificationWarning: errorMessage(error),
+      seriesOwner: normalizeAddress(fields.owner),
+      currentVersion: Number(fields.current_version ?? 0),
+      currentVersionId: String(fields.current_version_id ?? published.versionId),
+    };
+  }
+}
+
 async function readMarkdownContent(args) {
   const fullPath = path.resolve(String(args.file));
   const markdown = await fs.readFile(fullPath, 'utf8');
@@ -356,7 +411,7 @@ async function readMarkdownContent(args) {
 
   const JSZip = loadJSZip();
   const zip = new JSZip();
-  zip.file('index.md', markdown);
+  zip.file('index.md', markdown, zipFileOptions());
   zip.file(
     'manifest.json',
     `${JSON.stringify(
@@ -373,6 +428,7 @@ async function readMarkdownContent(args) {
       null,
       2,
     )}\n`,
+    zipFileOptions(),
   );
 
   const bytes = await zip.generateAsync({
@@ -650,11 +706,7 @@ async function main() {
 
   const published = extractPublishResult(toSdkResponse(execution), runtime.deployment);
   assert(published.artifactType === ARTIFACT_TYPES.blogPost, `Unexpected artifact type ${published.artifactType}.`);
-  const details = await runtime.sdk.query.getSeriesDetails(published.seriesId);
-  assert(
-    (details?.series?.seriesAuthorityModeName ?? details?.controlSnapshot?.authorityModeName ?? null) === 'controller_only',
-    `Newly published blog series must be controller_only. Current mode: ${details?.series?.seriesAuthorityModeName ?? details?.controlSnapshot?.authorityModeName ?? 'unknown'}.`,
-  );
+  const seriesReport = await resolvePublishedSeriesReport(runtime, execution, published);
 
   const report = {
     ...baseReport,
@@ -669,9 +721,11 @@ async function main() {
     transactionDigest: execution.digest,
     upload,
     previewUrl: `https://paperproof.site/#/artifact/${published.artifactCode}`,
-    seriesOwner: normalizeAddress(details.series.owner),
-    currentVersion: details.series.currentVersion,
-    currentVersionId: details.series.currentVersionId,
+    verification: seriesReport.verification,
+    verificationWarning: seriesReport.verificationWarning,
+    seriesOwner: seriesReport.seriesOwner,
+    currentVersion: seriesReport.currentVersion,
+    currentVersionId: seriesReport.currentVersionId,
   };
   const reportPath = await writeReport(reportDir, 'publish-blog-success', report);
   console.log(stringifyForJson({ ...report, reportPath }));

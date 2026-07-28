@@ -23,6 +23,7 @@
   "dependencies": {
     "@mysten/sui": "^2.16.0",
     "@mysten/walrus": "^1.1.7",
-    "@paperproof/sdk-ts": "0.3.0"
+    "@paperproof/sdk-ts": "0.3.0",
+    "jszip": "^3.10.1"
   }
 }
