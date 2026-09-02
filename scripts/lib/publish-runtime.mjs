@@ -2,7 +2,6 @@
 // SPDX-License-Identifier: Apache-2.0
 
 import { SuiGrpcClient } from '@mysten/sui/grpc';
-import { SuiJsonRpcClient } from '@mysten/sui/jsonRpc';
 import { MAINNET_WALRUS_PACKAGE_CONFIG, walrus } from '@mysten/walrus';
 import {
   MAINNET_DEPLOYMENT,
@@ -12,8 +11,8 @@ import {
 
 export const DEFAULT_RPC_URL = MAINNET_DEPLOYMENT.rpcUrl ?? 'https://fullnode.mainnet.sui.io:443';
 export const DEFAULT_WALRUS_RELAY = 'https://upload-relay.mainnet.walrus.space';
-export const DEFAULT_TRANSPORT = 'jsonrpc';
-export const DEFAULT_QUERY_TRANSPORT = 'fallback';
+export const DEFAULT_TRANSPORT = 'grpc';
+export const DEFAULT_QUERY_TRANSPORT = 'graphql';
 export const DEFAULT_RETRY_ATTEMPTS = 4;
 export const DEFAULT_RETRY_BASE_DELAY_MS = 1_500;
 export const DEFAULT_CONFIRM_ATTEMPTS = 8;
@@ -38,14 +37,14 @@ export function getArg(args, ...names) {
 
 export function normalizeTransport(value, fallback = DEFAULT_TRANSPORT) {
   const transport = String(value ?? fallback).toLowerCase();
-  if (transport === 'jsonrpc' || transport === 'grpc') return transport;
-  throw new Error(`Unsupported transport "${transport}". Use jsonrpc or grpc.`);
+  if (transport === 'grpc') return transport;
+  throw new Error(`Unsupported transport "${transport}". Use grpc.`);
 }
 
 export function normalizeQueryTransport(value, fallback = DEFAULT_QUERY_TRANSPORT) {
   const transport = String(value ?? fallback).toLowerCase();
-  if (transport === 'none' || transport === 'jsonrpc' || transport === 'graphql' || transport === 'fallback') return transport;
-  throw new Error(`Unsupported query transport "${transport}". Use none, jsonrpc, graphql, or fallback.`);
+  if (transport === 'none' || transport === 'graphql') return transport;
+  throw new Error(`Unsupported query transport "${transport}". Use none or graphql.`);
 }
 
 export function parseIntegerArg(value, fallback) {
@@ -151,9 +150,9 @@ export function classifyOperatorError(error, context = {}) {
 
   if (textHas(text, 'multigetobjects', 'getdynamicfieldobject', 'get object', 'getobject')) {
     result.category = 'sui';
-    result.code = 'JSONRPC_OBJECT_READ_FAILED';
+    result.code = 'OBJECT_READ_FAILED';
     result.retryable = true;
-    result.summary = 'JSON-RPC object read failed.';
+    result.summary = 'Object read failed.';
     return result;
   }
 
@@ -223,10 +222,10 @@ export function transportConfigFromArgs(args, options = {}) {
 }
 
 export function createBaseClient({ transport, rpcUrl, network }) {
-  if (transport === 'grpc') {
-    return new SuiGrpcClient({ baseUrl: rpcUrl, network });
+  if (transport !== 'grpc') {
+    throw new Error(`Unsupported transport "${transport}". Use grpc.`);
   }
-  return new SuiJsonRpcClient({ url: rpcUrl, network });
+  return new SuiGrpcClient({ baseUrl: rpcUrl, network });
 }
 
 export function createWalrusClient(baseClient, walrusRelay) {
@@ -270,38 +269,23 @@ export function createSkillRuntime(args, options = {}) {
 }
 
 export async function rawGetObject(baseClient, transport, objectId) {
-  if (transport === 'grpc') {
-    return baseClient.getObject({
-      objectId,
-      include: {
-        json: true,
-        owner: true,
-        previousTransaction: true,
-      },
-    });
-  }
+  if (transport !== 'grpc') throw new Error(`Unsupported transport "${transport}". Use grpc.`);
   return baseClient.getObject({
-    id: objectId,
-    options: {
-      showContent: true,
-      showOwner: true,
-      showPreviousTransaction: true,
+    objectId,
+    include: {
+      json: true,
+      owner: true,
+      previousTransaction: true,
     },
   });
 }
 
 export async function rawGetBalance(baseClient, transport, owner, coinType) {
-  if (transport === 'grpc') {
-    const result = await baseClient.getBalance({ owner, coinType });
-    return {
-      totalBalance: result.balance.balance,
-      coinObjectCount: result.balance.coinObjectCount ?? null,
-    };
-  }
+  if (transport !== 'grpc') throw new Error(`Unsupported transport "${transport}". Use grpc.`);
   const result = await baseClient.getBalance({ owner, coinType });
   return {
-    totalBalance: result.totalBalance,
-    coinObjectCount: result.coinObjectCount ?? null,
+    totalBalance: result.balance.balance,
+    coinObjectCount: result.balance.coinObjectCount ?? null,
   };
 }
 

@@ -24,8 +24,8 @@ If the request is broad, ask one short clarifying question only when the missing
 
 ## Community Defaults
 
-- Prefer `jsonrpc` for reads and readiness checks unless the user explicitly asks for gRPC.
-- Treat `fallback` as the default query mode when a confirmation read may need a second path.
+- Prefer `grpc` for reads, readiness checks, and write-path preflights.
+- Prefer `graphql` for event discovery and confirmation reads when available.
 - Keep this skill reusable for third-party apps, notebooks, and agents; do not assume official server paths or browser sessions.
 - For local signed flows, prefer user-controlled signer sources in this order: browser wallet, local Sui CLI keystore, then explicit env-managed signer material.
 - Use the current protocol content model correctly:

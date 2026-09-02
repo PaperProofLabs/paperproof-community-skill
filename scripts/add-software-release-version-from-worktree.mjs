@@ -56,8 +56,8 @@ Options:
   --cli-address=<0x...>
   --cli-alias=<name>
   --rpc=<url>
-  --transport=grpc|jsonrpc
-  --query-transport=none|jsonrpc|graphql|fallback
+  --transport=grpc
+  --query-transport=none|graphql
   --walrus-relay=<url>
 `.trim();
 }

@@ -66,8 +66,8 @@ Optional:
 
 Transport:
   --rpc=<url>
-  --transport=grpc|jsonrpc
-  --query-transport=none|jsonrpc|graphql|fallback
+  --transport=grpc
+  --query-transport=none|graphql
   --walrus-relay=<url>
   --retry-attempts=<n>
   --retry-base-ms=<ms>

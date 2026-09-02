@@ -160,7 +160,7 @@ async function main() {
     return;
   }
 
-  const execution = await robustExecuteTransaction(runtime.baseClient ?? runtime.jsonRpc, signerResult.signer, tx, 'create signal proposal');
+  const execution = await robustExecuteTransaction(runtime.baseClient, signerResult.signer, tx, 'create signal proposal');
   const extracted = extractProposalResult({
     events: execution.events ?? [],
   }, runtime.sdk.deployment);

@@ -7,7 +7,6 @@ import fs from 'node:fs/promises';
 import path from 'node:path';
 
 import { SuiGrpcClient } from '@mysten/sui/grpc';
-import { SuiJsonRpcClient } from '@mysten/sui/jsonRpc';
 import { Transaction } from '@mysten/sui/transactions';
 import { walrus } from '@mysten/walrus';
 import {
@@ -381,7 +380,7 @@ async function main() {
 
   const deployment = createDeployment(MAINNET_DEPLOYMENT);
   const sdk = createPaperProofSDK({ deployment });
-  const sui = new SuiJsonRpcClient({ url: deployment.rpcUrl ?? 'https://fullnode.mainnet.sui.io:443' });
+  const sui = new SuiGrpcClient({ baseUrl: deployment.rpcUrl ?? 'https://fullnode.mainnet.sui.io:443', network: 'mainnet' });
   const walrusClient = new SuiGrpcClient({ baseUrl: deployment.rpcUrl, network: 'mainnet' }).$extend(
     walrus({
       network: 'mainnet',

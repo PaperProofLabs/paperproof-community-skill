@@ -145,8 +145,8 @@ Recommended practice:
 - `--cli-address=<0x...>`
 - `--cli-alias=<name>`
 - `--rpc=<url>`
-- `--transport=grpc|jsonrpc`
-- `--query-transport=none|jsonrpc|graphql|fallback`
+- `--transport=grpc`
+- `--query-transport=none|graphql`
 - `--walrus-relay=<url>`
 - `--retry-attempts=<n>`
 - `--retry-base-ms=<ms>`
@@ -155,8 +155,8 @@ Recommended practice:
 
 Recommended community default:
 
-- read path on `jsonrpc`
-- query path on `fallback`
+- read path on `grpc`
+- query path on `graphql`
 - explicit preflight before `--run`
 
 Controller-bound default:

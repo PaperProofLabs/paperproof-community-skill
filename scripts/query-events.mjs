@@ -3,6 +3,8 @@
 // Copyright (c) 2026 PaperProof Labs
 // SPDX-License-Identifier: Apache-2.0
 
+import { pathToFileURL } from 'node:url';
+
 import { fail, parseArgs, pickDefined, printJson } from './lib/cli.mjs';
 
 async function loadSdk() {
@@ -13,13 +15,21 @@ async function loadSdk() {
   }
 }
 
+export function resolveQueryTransport(args) {
+  if (args.queryTransport && String(args.queryTransport).toLowerCase() !== 'graphql') {
+    throw new Error('query-events only supports GraphQL queries now. Use --query-transport=graphql or omit the flag.');
+  }
+  return 'graphql';
+}
+
 async function main() {
   const args = parseArgs();
   const { createPaperProofSDK, MAINNET_DEPLOYMENT } = await loadSdk();
+  const queryTransport = resolveQueryTransport(args);
   const sdk = createPaperProofSDK({
     network: 'mainnet',
-    transport: 'jsonrpc',
-    queryTransport: args.queryTransport === 'graphql' ? 'graphql' : 'fallback',
+    transport: 'grpc',
+    queryTransport,
     ...(typeof args.rpc === 'string' ? { rpcUrl: args.rpc } : {}),
     ...(typeof args.graphql === 'string' ? { graphQLEndpoint: args.graphql } : {}),
   });
@@ -38,7 +48,17 @@ async function main() {
     trust: args.trust === 'raw' || args.trust === 'verified' ? args.trust : 'canonical',
     includeRejected: Boolean(args.includeRejected),
   }));
-  printJson({ ok: true, network: sdk.network, provider: page.provider, moveEventType, page });
+  printJson({
+    ok: true,
+    network: sdk.network,
+    provider: page.provider,
+    moveEventType,
+    guidance: 'This diagnostic helper is bounded. For broad public mainnet discovery, prefer a PaperProof indexer or checkpoint-backed pipeline.',
+    page,
+  });
 }
 
-main().catch(fail);
+const directRunTarget = process.argv[1] ? pathToFileURL(process.argv[1]).href : null;
+if (directRunTarget && import.meta.url === directRunTarget) {
+  main().catch(fail);
+}

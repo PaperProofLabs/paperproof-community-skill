@@ -8,13 +8,11 @@ import {
   createPaperProofSDK,
   stringifyForJson,
 } from '@paperproof/sdk-ts';
-import { SuiJsonRpcClient } from '@mysten/sui/jsonRpc';
-
-import { DEFAULT_RPC_URL, createResultError, errorMessage, getArg } from './publish-runtime.mjs';
+import { DEFAULT_RPC_URL, createBaseClient, createResultError, errorMessage, getArg, normalizeQueryTransport, normalizeTransport } from './publish-runtime.mjs';
 import { normalizeAddress } from './signer.mjs';
 
-export const DEFAULT_GOVERNANCE_TRANSPORT = 'jsonrpc';
-export const DEFAULT_GOVERNANCE_QUERY_TRANSPORT = 'fallback';
+export const DEFAULT_GOVERNANCE_TRANSPORT = 'grpc';
+export const DEFAULT_GOVERNANCE_QUERY_TRANSPORT = 'graphql';
 
 function assert(condition, message) {
   if (!condition) throw new Error(message);
@@ -30,11 +28,11 @@ export function usageHeader() {
     '  --cli-address=<0x...>      pick one CLI keystore address explicitly',
     '  --cli-alias=<name>         pick one CLI alias explicitly',
     '',
-    'Transport:',
-    '  --rpc=<url>',
-    '  --transport=jsonrpc|grpc',
-    '  --query-transport=none|jsonrpc|graphql|fallback',
-  ].join('\n');
+  'Transport:',
+  '  --rpc=<url>',
+  '  --transport=grpc',
+  '  --query-transport=none|graphql',
+].join('\n');
 }
 
 export function parseGovernanceArgs(argv = process.argv.slice(2)) {
@@ -125,16 +123,20 @@ export function outcomePreview(totalSupplyRaw, yesVotesRaw, noVotesRaw) {
 
 export function createGovernanceRuntime(args) {
   const rpcUrl = String(getArg(args, 'rpc') ?? DEFAULT_RPC_URL);
-  const transport = String(getArg(args, 'transport') ?? DEFAULT_GOVERNANCE_TRANSPORT).toLowerCase();
-  const queryTransport = String(getArg(args, 'queryTransport', 'query-transport') ?? DEFAULT_GOVERNANCE_QUERY_TRANSPORT).toLowerCase();
+  const transport = normalizeTransport(getArg(args, 'transport'), DEFAULT_GOVERNANCE_TRANSPORT);
+  const queryTransport = normalizeQueryTransport(getArg(args, 'queryTransport', 'query-transport'), DEFAULT_GOVERNANCE_QUERY_TRANSPORT);
   const sdk = createPaperProofSDK({
     network: 'mainnet',
     transport,
     queryTransport,
     rpcUrl,
   });
-  const jsonRpc = new SuiJsonRpcClient({ url: rpcUrl });
-  return { sdk, jsonRpc, rpcUrl, transport, queryTransport };
+  const baseClient = createBaseClient({
+    transport,
+    rpcUrl,
+    network: 'mainnet',
+  });
+  return { sdk, baseClient, rpcUrl, transport, queryTransport };
 }
 
 export async function fetchGovernanceConfig(runtime) {
@@ -153,7 +155,7 @@ export async function fetchGovernanceConfig(runtime) {
 export async function fetchSignerBalances(runtime, address) {
   const balances = {};
   for (const [label, coinType] of Object.entries(runtime.sdk.deployment.coinTypes)) {
-    const balance = await runtime.jsonRpc.getBalance({ owner: address, coinType });
+    const balance = await runtime.sdk.read.getBalance(address, coinType);
     balances[label] = {
       coinType,
       totalBalance: BigInt(balance.totalBalance),
@@ -164,14 +166,7 @@ export async function fetchSignerBalances(runtime, address) {
 }
 
 export async function fetchCoins(runtime, owner, coinType) {
-  const coins = [];
-  let cursor = null;
-  do {
-    const page = await runtime.jsonRpc.getCoins({ owner, coinType, cursor });
-    coins.push(...(page.data ?? []));
-    cursor = page.hasNextPage ? page.nextCursor : null;
-  } while (cursor);
-  return coins;
+  return runtime.sdk.read.getCoins(owner, coinType);
 }
 
 export async function findVoteCoin(runtime, owner, minAmountRaw) {

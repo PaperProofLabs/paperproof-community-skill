@@ -119,11 +119,8 @@ async function main() {
   const proposalState = await readProposal(runtime, proposalRef);
   requireActiveProposal(proposalState.proposal);
 
-  const coin = await runtime.jsonRpc.getCoins({
-    owner: signerResult.address,
-    coinType: runtime.sdk.deployment.coinTypes.pprf,
-  });
-  const selectedCoin = (coin.data ?? [])
+  const coin = await runtime.sdk.read.getCoins(signerResult.address, runtime.sdk.deployment.coinTypes.pprf);
+  const selectedCoin = coin
     .filter((item) => BigInt(item.balance) >= stakeRaw)
     .sort((left, right) => (BigInt(right.balance) > BigInt(left.balance) ? 1 : -1))[0];
   if (!selectedCoin) throw new Error(`No PPRF coin found with at least ${stakeRaw.toString()} raw units for voting.`);
@@ -145,7 +142,7 @@ async function main() {
     return;
   }
 
-  const execution = await robustExecuteTransaction(runtime.baseClient ?? runtime.jsonRpc, signerResult.signer, tx, `vote ${side}`);
+  const execution = await robustExecuteTransaction(runtime.baseClient, signerResult.signer, tx, `vote ${side}`);
   const updated = await readProposal(runtime, proposalState.proposalObjectId);
   printResult({
     ...base,

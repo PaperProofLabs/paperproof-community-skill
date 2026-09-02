@@ -4,6 +4,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 import { fail, parseArgs, printJson, requireArg } from './lib/cli.mjs';
+import { normalizeTransport } from './lib/publish-runtime.mjs';
 
 async function loadSdk() {
   try {
@@ -17,9 +18,10 @@ async function main() {
   const args = parseArgs();
   const seriesId = requireArg(args, 'series');
   const { createPaperProofSDK } = await loadSdk();
+  normalizeTransport(args.transport, 'grpc');
   const sdk = createPaperProofSDK({
     network: 'mainnet',
-    transport: args.transport === 'jsonrpc' ? 'jsonrpc' : 'grpc',
+    transport: 'grpc',
     queryTransport: 'none',
     ...(typeof args.rpc === 'string' ? { rpcUrl: args.rpc } : {}),
   });

@@ -38,6 +38,7 @@ async function main() {
     rpcUrl: runtime.rpcUrl,
     transport: runtime.transport,
     queryTransport: runtime.queryTransport,
+    guidance: 'Use this helper for bounded governance inspection. For broad public proposal/vote history, prefer the PaperProof indexer/API.',
     governance: {
       governanceConfigId: config.id,
       totalSupply: config.totalSupply ?? null,

@@ -3,7 +3,7 @@
 // Copyright (c) 2026 PaperProof Labs
 // SPDX-License-Identifier: Apache-2.0
 
-import { SuiJsonRpcClient } from '@mysten/sui/jsonRpc';
+import { SuiGrpcClient } from '@mysten/sui/grpc';
 import { fail, parseArgs, printJson, requireArg } from './lib/cli.mjs';
 
 const COINS = {
@@ -16,15 +16,15 @@ async function main() {
   const args = parseArgs();
   const owner = requireArg(args, 'address');
   const url = typeof args.rpc === 'string' ? args.rpc : 'https://fullnode.mainnet.sui.io:443';
-  const client = new SuiJsonRpcClient({ url });
+  const client = new SuiGrpcClient({ baseUrl: url, network: 'mainnet' });
   const balances = {};
   for (const [symbol, coinType] of Object.entries(COINS)) {
     try {
       const balance = await client.getBalance({ owner, coinType });
       balances[symbol] = {
         coinType,
-        totalBalance: balance.totalBalance,
-        coinObjectCount: balance.coinObjectCount,
+        totalBalance: balance.balance?.balance ?? balance.totalBalance ?? '0',
+        coinObjectCount: balance.balance?.coinObjectCount ?? balance.coinObjectCount ?? null,
       };
     } catch (error) {
       balances[symbol] = { coinType, error: error instanceof Error ? error.message : String(error) };
