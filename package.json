@@ -1,9 +1,17 @@
 {
   "name": "paperproof-protocol-skill",
-  "version": "0.1.0",
-  "private": true,
+  "version": "0.1.1",
   "type": "module",
   "description": "Codex skill resources and protocol helper scripts for PaperProof.",
+  "files": [
+    "SKILL.md",
+    "README.md",
+    "LICENSE",
+    "agents",
+    "references",
+    "scripts",
+    "tests"
+  ],
   "scripts": {
     "check:wallet": "node scripts/check-wallet.mjs",
     "publish:blog:file": "node scripts/publish-blog-post-from-local-file.mjs",
