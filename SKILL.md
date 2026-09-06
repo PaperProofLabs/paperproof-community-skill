@@ -5,6 +5,10 @@ description: Operate the PaperProof protocol for AI agents and developer assista
 
 # PaperProof Protocol
 
+The official website is currently served at `https://paperproof.site/` from
+the migrated production host. Treat it as an optional preview surface only;
+protocol operations must continue to work without website availability.
+
 Use this skill as a protocol client guide, not as a website automation guide. Prefer `@paperproof/sdk-ts`, Sui clients, Walrus clients, and indexer APIs. The skill must remain useful if every PaperProof website or UI disappears. Use websites only for optional human preview links or when the user explicitly requests browser interaction.
 
 The skill is suitable for community PaperProof users, developers, operators, researchers, and AI agents. Keep it useful for third-party PaperProof applications and user-owned artifacts; avoid project-private mappings, unpublished operational assumptions, or PaperProof Labs internal-only shortcuts unless the user explicitly provides that context.
